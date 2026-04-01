@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CyPath Dashboard</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; text-align: center; margin-top: 50px; background-color: #fafafa; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: inline-block; margin: 10px; width: 200px; }
+        .value { font-size: 36px; font-weight: bold; color: #2c3e50; }
+        .label { color: #7f8c8d; text-transform: uppercase; font-size: 14px; letter-spacing: 1px; }
+        
+        /* Form styling */
+        .form-container { margin-top: 40px; padding: 20px; background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: inline-block; }
+        input[type="number"] { padding: 10px; font-size: 16px; border: 1px solid #ccc; border-radius: 6px; width: 150px; }
+        button { padding: 10px 20px; font-size: 16px; background-color: #3498db; color: white; border: none; border-radius: 6px; cursor: pointer; margin-left: 10px; }
+        button:hover { background-color: #2980b9; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚴‍♂️ CyPath Prototype</h1>
+        <p>Live Banister Model Calculations</p>
+        
+        <div>
+            <div class="card">
+                <div class="label">Fitness</div>
+                <div class="value">{{ fitness }}</div>
+            </div>
+            <div class="card">
+                <div class="label">Fatigue</div>
+                <div class="value">{{ fatigue }}</div>
+            </div>
+            <div class="card" style="border: 2px solid #e74c3c;">
+                <div class="label">Readiness</div>
+                <div class="value" style="color: #e74c3c;">{{ readiness }}</div>
+            </div>
+        </div>
+
+        <div class="form-container">
+            <h3>Log Today's Workout</h3>
+            <form method="POST" action="/">
+                <input type="number" name="training_load" placeholder="Enter TSS (e.g., 100)" required min="0" step="any">
+                <button type="submit">Log Activity</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
