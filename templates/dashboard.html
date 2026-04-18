@@ -3,48 +3,364 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CyPath Dashboard</title>
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; text-align: center; margin-top: 50px; background-color: #fafafa; }
-        .container { max-width: 800px; margin: 0 auto; }
-        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: inline-block; margin: 10px; width: 200px; }
-        .value { font-size: 36px; font-weight: bold; color: #2c3e50; }
-        .label { color: #7f8c8d; text-transform: uppercase; font-size: 14px; letter-spacing: 1px; }
-        
-        /* Form styling */
-        .form-container { margin-top: 40px; padding: 20px; background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: inline-block; }
-        input[type="number"] { padding: 10px; font-size: 16px; border: 1px solid #ccc; border-radius: 6px; width: 150px; }
-        button { padding: 10px 20px; font-size: 16px; background-color: #3498db; color: white; border: none; border-radius: 6px; cursor: pointer; margin-left: 10px; }
-        button:hover { background-color: #2980b9; }
-    </style>
+    <title>CyPath</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
-    <div class="container">
-        <h1>🚴‍♂️ CyPath Prototype</h1>
-        <p>Live Banister Model Calculations</p>
-        
-        <div>
-            <div class="card">
-                <div class="label">Fitness</div>
-                <div class="value">{{ fitness }}</div>
+
+<div class="phone-shell">
+
+    <!-- ── Top bar ──────────────────────────────────────────────────────── -->
+    <div class="top-bar">
+        <span class="app-title">CyPath</span>
+        <button class="icon-btn" onclick="document.getElementById('resetModal').style.display='flex'">⚙</button>
+    </div>
+
+    <!-- ── Profile banner ──────────────────────────────────────────────── -->
+    <div class="profile-banner">
+        <div class="avatar">🚴</div>
+        <div class="profile-info">
+            <span class="profile-name">{{ plan.profile | upper }}</span>
+            <span class="profile-tag">| {{ plan.profile | capitalize }} Rider</span>
+        </div>
+    </div>
+
+    <!-- ── Flash messages ──────────────────────────────────────────────── -->
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <div class="flash-wrap">
+                {% for msg in messages %}
+                    <div class="flash-msg">{{ msg }}</div>
+                {% endfor %}
             </div>
-            <div class="card">
-                <div class="label">Fatigue</div>
-                <div class="value">{{ fatigue }}</div>
+        {% endif %}
+    {% endwith %}
+
+    <!-- ── Scrollable content ──────────────────────────────────────────── -->
+    <div class="scroll-content">
+
+        <div class="section-label">HOME</div>
+
+        <!-- ── Row 1: Path card + Today's roadmap ──────────────────────── -->
+        <div class="card-row">
+
+            <!-- Path to 100km -->
+            <div class="card path-card">
+                <div class="card-title">MY PATH TO 100 KM</div>
+
+                <!-- Circular progress ring -->
+                {% set pct = ((today_day / 84) * 100) | round(0) | int %}
+                {% set circumference = 188 %}
+                {% set dash = (pct / 100 * circumference) | round(1) %}
+                <div class="ring-wrap">
+                    <svg class="ring" viewBox="0 0 70 70">
+                        <circle class="ring-bg"   cx="35" cy="35" r="30" />
+                        <circle class="ring-fill" cx="35" cy="35" r="30"
+                            stroke-dasharray="{{ dash }} {{ circumference }}"
+                            transform="rotate(-90 35 35)" />
+                    </svg>
+                    <div class="ring-label">
+                        <span class="ring-pct">{{ pct }}%</span>
+                    </div>
+                </div>
+
+                <div class="path-detail">Complete | {{ 84 - today_day }} days to go</div>
+                <div class="path-detail">Week {{ ((today_day - 1) // 7 + 1) }} of 12</div>
+                <div class="path-detail">
+                    {% if today_snap %}
+                        CTL: <strong>{{ today_snap.ctl }}</strong>
+                    {% endif %}
+                </div>
             </div>
-            <div class="card" style="border: 2px solid #e74c3c;">
-                <div class="label">Readiness</div>
-                <div class="value" style="color: #e74c3c;">{{ readiness }}</div>
+
+            <!-- Today's roadmap -->
+            <div class="card roadmap-card">
+                <div class="card-title">TODAY'S ROADMAP</div>
+                <div class="roadmap-day">Day {{ today_day }}</div>
+
+                {% if today_workout and today_workout.phase != 'Rest' %}
+                    {% set status = today_workout.status if today_workout.status is defined else STATUS_PLANNED %}
+                    <div class="roadmap-steps">
+                        <div class="step {% if status == STATUS_COMPLETED %}step-done{% elif status == STATUS_MISSED %}step-missed{% endif %}">
+                            <div class="step-num">1</div>
+                            <div class="step-info">
+                                <div class="step-name">{{ today_workout.description | upper }}</div>
+                                <div class="step-tss">{{ today_workout.target_tss }} TSS · {{ today_workout.phase }}</div>
+                                {% if today_workout.detail %}
+                                <div class="step-detail">{{ today_workout.detail }}</div>
+                                {% endif %}
+                                {% if status == STATUS_PLANNED %}
+                                    <form action="{{ url_for('complete_session') }}" method="POST">
+                                        <input type="hidden" name="day" value="{{ today_day }}">
+                                        <button type="submit" class="step-btn">MARK COMPLETE</button>
+                                    </form>
+                                    <form action="{{ url_for('miss_session') }}" method="POST" style="margin-top:4px">
+                                        <input type="hidden" name="day" value="{{ today_day }}">
+                                        <button type="submit" class="step-btn-ghost">I MISSED THIS</button>
+                                    </form>
+                                {% else %}
+                                    <span class="step-status-label">{{ status | upper }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="rest-badge">😴 REST DAY</div>
+                    <div class="step-tss" style="margin-top:8px; text-align:center;">Recovery is part of the plan.</div>
+                {% endif %}
+
+                <form action="{{ url_for('advance_day') }}" method="POST" style="margin-top:10px;">
+                    <button type="submit" class="next-day-btn">Next Day →</button>
+                </form>
             </div>
+
         </div>
 
-        <div class="form-container">
-            <h3>Log Today's Workout</h3>
-            <form method="POST" action="/">
-                <input type="number" name="training_load" placeholder="Enter TSS (e.g., 100)" required min="0" step="any">
-                <button type="submit">Log Activity</button>
+        <!-- ── Fitness curve ────────────────────────────────────────────── -->
+        <div class="card full-card">
+            <div class="card-title">FITNESS CURVE — PATH TO RACE DAY</div>
+            <div class="chart-wrap">
+                <canvas id="fitnessChart"></canvas>
+            </div>
+            <div class="chart-legend">
+                <span class="dot" style="background:#3498db"></span>Fitness (CTL)
+                <span class="dot" style="background:#e74c3c; margin-left:10px"></span>Fatigue (ATL)
+                <span class="dot" style="background:#9b59b6; margin-left:10px"></span>Readiness (TSB)
+            </div>
+            <!-- Live stats strip -->
+            {% if today_snap %}
+            <div class="stats-strip">
+                <div class="stat-item">
+                    <div class="stat-val" style="color:#3498db">{{ today_snap.ctl }}</div>
+                    <div class="stat-lbl">FITNESS</div>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat-item">
+                    <div class="stat-val" style="color:#e74c3c">{{ today_snap.atl }}</div>
+                    <div class="stat-lbl">FATIGUE</div>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat-item">
+                    <div class="stat-val" style="color:{% if today_snap.tsb >= 0 %}#27ae60{% else %}#e74c3c{% endif %}">
+                        {{ today_snap.tsb }}
+                    </div>
+                    <div class="stat-lbl">READINESS</div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- ── Next milestone ───────────────────────────────────────────── -->
+        {% set current_week = ((today_day - 1) // 7 + 1) %}
+        {% set weeks_left = 12 - current_week %}
+        <div class="card full-card milestone-card">
+            <div class="card-title">NEXT MILESTONE</div>
+            <div class="milestone-name">
+                {% if current_week <= 6 %}🏔 END OF BASE PHASE
+                {% elif current_week <= 10 %}⚡ END OF BUILD PHASE
+                {% else %}🏁 RACE DAY — 100 KM SUMMIT{% endif %}
+            </div>
+            <div class="milestone-bar-wrap">
+                <div class="milestone-bar">
+                    <div class="milestone-fill" style="width: {{ pct }}%"></div>
+                </div>
+                <div class="milestone-markers">
+                    <span>{{ pct }}%</span>
+                    <span>🏔</span>
+                </div>
+            </div>
+            <div class="milestone-sub">{{ weeks_left }} week{{ 's' if weeks_left != 1 else '' }} remaining</div>
+        </div>
+
+        <!-- ── Action buttons ───────────────────────────────────────────── -->
+        <div class="card-row">
+            <a href="#plan-section" class="action-card">
+                <div class="action-icon">📅</div>
+                <div class="action-label">FULL TRAINING PLAN</div>
+            </a>
+            <a href="#plan-section" class="action-card">
+                <div class="action-icon">📊</div>
+                <div class="action-label">WEEK SUMMARY</div>
+            </a>
+        </div>
+
+        <!-- ── Full training plan ───────────────────────────────────────── -->
+        <div id="plan-section">
+            <div class="section-label" style="margin-top:16px;">TRAINING PLAN</div>
+
+            {% for week in weeks %}
+            <div class="week-block phase-{{ week.phase | lower }}">
+                <div class="week-hdr">
+                    <div class="week-title-row">
+                        <span class="wk-num">Week {{ week.number }}</span>
+                        <span class="phase-chip">{{ week.phase }}</span>
+                    </div>
+                    <span class="wk-tss">{{ week.total_tss }} TSS</span>
+                </div>
+
+                {% for w in week.workouts %}
+                {% set status = w.status if w.status is defined else STATUS_PLANNED %}
+                <div class="day-row status-{{ status }}{% if w.day == today_day %} today-row{% endif %}">
+                    <div class="day-num">
+                        D{{ w.day }}
+                        {% if w.day == today_day %}<span class="today-dot">●</span>{% endif %}
+                    </div>
+                    <div class="day-desc">
+                        {% if w.phase == 'Rest' %}
+                            <span class="muted-txt">Rest</span>
+                        {% else %}
+                            <span class="day-desc-title">{{ w.description }}</span>
+                            {% if w.detail %}
+                            <span class="day-desc-sub">{{ w.detail }}</span>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                    <div class="day-tss">
+                        {% if w.phase != 'Rest' %}{{ w.target_tss }}{% endif %}
+                    </div>
+                    <div class="day-actions">
+                        {% if w.phase != 'Rest' %}
+                            {% if status == STATUS_PLANNED %}
+                                <form action="{{ url_for('complete_session') }}" method="POST" class="ifrm">
+                                    <input type="hidden" name="day" value="{{ w.day }}">
+                                    <button class="btn-done">✓</button>
+                                </form>
+                                <form action="{{ url_for('miss_session') }}" method="POST" class="ifrm">
+                                    <input type="hidden" name="day" value="{{ w.day }}">
+                                    <button class="btn-miss">✕</button>
+                                </form>
+                            {% else %}
+                                <span class="status-chip status-chip-{{ status }}">{{ status }}</span>
+                                <form action="{{ url_for('restore_session') }}" method="POST" class="ifrm">
+                                    <input type="hidden" name="day" value="{{ w.day }}">
+                                    <button class="btn-undo">↩</button>
+                                </form>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="disclaimer">
+            ⚠️ CyPath is a university research prototype, not professional coaching or medical advice. Consult a physician before starting any training programme.
+        </div>
+
+        <!-- Spacer for bottom nav -->
+        <div style="height: 80px;"></div>
+
+    </div><!-- end scroll-content -->
+
+    <!-- ── Floating action button ───────────────────────────────────────── -->
+    <button class="fab" onclick="document.getElementById('plan-section').scrollIntoView({behavior:'smooth'})">+</button>
+
+    <!-- ── Bottom navigation ────────────────────────────────────────────── -->
+    <nav class="bottom-nav">
+        <a class="nav-item active" href="#">
+            <span class="nav-icon">⊙</span>
+            <span>Dashboard</span>
+        </a>
+        <a class="nav-item" href="#plan-section">
+            <span class="nav-icon">🗺</span>
+            <span>Train</span>
+        </a>
+        <a class="nav-item" href="#">
+            <span class="nav-icon">📈</span>
+            <span>Stats</span>
+        </a>
+        <a class="nav-item" href="{{ url_for('reset') }}" onclick="return confirm('Start over?')">
+            <span class="nav-icon">⚙</span>
+            <span>Settings</span>
+        </a>
+    </nav>
+
+</div><!-- end phone-shell -->
+
+<!-- ── Reset modal ──────────────────────────────────────────────────────── -->
+<div id="resetModal" class="modal-overlay" style="display:none">
+    <div class="modal-box">
+        <div class="modal-title">Start Over?</div>
+        <div class="modal-body">This will delete your current plan and take you back to the setup screen.</div>
+        <div class="modal-actions">
+            <button class="modal-cancel" onclick="document.getElementById('resetModal').style.display='none'">Cancel</button>
+            <form action="{{ url_for('reset') }}" method="POST" style="display:inline">
+                <button class="modal-confirm">Yes, reset</button>
             </form>
         </div>
     </div>
+</div>
+
+<!-- ── Chart.js ─────────────────────────────────────────────────────────── -->
+<script>
+(function () {
+    const labels   = {{ chart_labels | tojson }};
+    const ctlData  = {{ chart_ctl    | tojson }};
+    const atlData  = {{ chart_atl    | tojson }};
+    const tsbData  = {{ chart_tsb    | tojson }};
+    const splitIdx = {{ split_index }};
+
+    const vLinePlugin = {
+        id: "vline",
+        afterDraw(chart) {
+            if (splitIdx <= 0) return;
+            const ctx = chart.ctx;
+            const x = chart.scales.x.getPixelForValue(splitIdx);
+            const { top, bottom } = chart.scales.y;
+            ctx.save();
+            ctx.beginPath();
+            ctx.setLineDash([4, 4]);
+            ctx.strokeStyle = "rgba(0,0,0,0.25)";
+            ctx.lineWidth = 1.5;
+            ctx.moveTo(x, top);
+            ctx.lineTo(x, bottom);
+            ctx.stroke();
+            ctx.restore();
+        }
+    };
+
+    new Chart(document.getElementById("fitnessChart").getContext("2d"), {
+        type: "line",
+        plugins: [vLinePlugin],
+        data: {
+            labels,
+            datasets: [
+                { label: "CTL", data: ctlData, borderColor: "#3498db",
+                  backgroundColor: "rgba(52,152,219,0.08)", borderWidth: 2,
+                  pointRadius: 0, tension: 0.3, fill: true },
+                { label: "ATL", data: atlData, borderColor: "#e74c3c",
+                  borderWidth: 2, pointRadius: 0, tension: 0.3, fill: false },
+                { label: "TSB", data: tsbData, borderColor: "#9b59b6",
+                  borderWidth: 1.5, pointRadius: 0, tension: 0.3, fill: false }
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            interaction: { mode: "index", intersect: false },
+            plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { title: (i) => `Day ${i[0].dataIndex + 1}` } }
+            },
+            scales: {
+                x: {
+                    ticks: {
+                        maxTicksLimit: 12,
+                        callback: (v, i) => i % 7 === 0 ? `W${Math.floor(i/7)+1}` : "",
+                        font: { size: 10 }
+                    },
+                    grid: { display: false }
+                },
+                y: {
+                    ticks: { font: { size: 10 } },
+                    grid: { color: "rgba(0,0,0,0.04)" }
+                }
+            }
+        }
+    });
+})();
+</script>
+
 </body>
 </html>

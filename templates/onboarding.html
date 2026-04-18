@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CyPath — Get Started</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<div class="ob-container">
+
+    <!-- Header -->
+    <div class="ob-header">
+        <div class="ob-logo">Cy<span>Path</span></div>
+        <div class="ob-sub">Your smart 12-week training companion</div>
+    </div>
+
+    <div class="ob-body">
+
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for msg in messages %}
+                    <div class="flash-msg" style="margin-bottom:16px;">{{ msg }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div class="ob-title">Let's build your plan 🚴</div>
+        <div class="ob-desc">A few quick questions and we'll generate a safe, personalised 12-week training plan for your 100 km event.</div>
+
+        <form action="{{ url_for('create_plan') }}" method="POST">
+
+            <!-- Fitness level -->
+            <div class="form-group">
+                <label>Your fitness level</label>
+                <select name="profile" required>
+                    <option value="beginner">Beginner — new to structured training</option>
+                    <option value="intermediate" selected>Intermediate — ride regularly</option>
+                    <option value="experienced">Experienced — consistent endurance training</option>
+                </select>
+            </div>
+
+            <!-- Training days -->
+            <div class="form-group">
+                <label>Training days</label>
+                <div class="day-grid">
+                    {% for day_num, day_name in [(0,'Mon'),(1,'Tue'),(2,'Wed'),(3,'Thu'),(4,'Fri'),(5,'Sat'),(6,'Sun')] %}
+                    <label>
+                        <input type="checkbox" name="training_days" value="{{ day_num }}"
+                            {% if day_num in [1,3,5,6] %}checked{% endif %}>
+                        <div class="day-btn">{{ day_name }}</div>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Recovery weeks toggle -->
+            <div class="toggle-row">
+                <div>
+                    <div class="toggle-label">Include recovery weeks</div>
+                    <div class="toggle-sub">Recommended — reduces load every 4th week</div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" name="recovery_weeks" checked>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+
+            <button type="submit" class="submit-btn">Generate my plan →</button>
+
+        </form>
+    </div>
+
+    <div class="ob-disclaimer">
+        ⚠️ CyPath is a university research prototype. Not a substitute for professional coaching or medical advice. Consult a physician before starting any training programme.
+    </div>
+
+</div>
+</body>
+</html>

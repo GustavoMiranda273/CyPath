@@ -62,11 +62,12 @@ SESSION_WEIGHTS: List[float] = [0.35, 0.25, 0.18, 0.12, 0.10]
 @dataclass
 class Workout:
     """Represents a single day in the plan."""
-    day:        int      # 1-84 (day number across the whole 12-week plan)
-    week:       int      # 1-12
-    phase:      str      # "Base", "Build", "Taper", or "Rest"
-    target_tss: float    # Prescribed TSS for the day (0 = rest day)
-    description: str     # Human-readable label (e.g. "Long endurance ride")
+    day:         int    # 1-84 (day number across the whole 12-week plan)
+    week:        int    # 1-12
+    phase:       str    # "Base", "Build", "Taper", or "Rest"
+    target_tss:  float  # Prescribed TSS for the day (0 = rest day)
+    description: str    # Short label (e.g. "Long endurance ride")
+    detail:      str = ""  # One-line instruction telling the user what to do
 
 
 @dataclass
@@ -99,25 +100,87 @@ def _phase_for_week(week: int) -> str:
     raise ValueError(f"Week {week} is outside the 12-week plan")
 
 
-def _session_labels(num_sessions: int) -> List[str]:
+# ─── Phase-aware session catalogue ──────────────────────────────────────────
+# Each entry is (description, detail) — the detail tells the user exactly
+# what kind of workout to do and how to approach it.
+# Sessions are ordered heaviest-to-lightest (index 0 = longest/hardest).
+
+SESSION_CATALOGUE: Dict[str, List[tuple]] = {
+    "Base": [
+        ("Long endurance ride",
+         "Road cycling — long, steady effort at 65-75% max HR. "
+         "Focus on smooth pedalling and building your aerobic base."),
+        ("Interval session",
+         "Road cycling — 6×4 min hard efforts at 85-90% max HR, "
+         "3 min easy between each. Builds aerobic power."),
+        ("Tempo ride",
+         "Road cycling — sustained effort at 75-85% max HR. "
+         "Comfortably hard — you can talk, but only in short sentences."),
+        ("Recovery spin",
+         "Easy cycling or indoor spin — very light effort, 50-60% max HR. "
+         "Keeps the legs moving without adding fatigue."),
+        ("Easy endurance ride",
+         "Road cycling — relaxed conversational pace at 60-70% max HR. "
+         "Good day to focus on technique and cadence."),
+    ],
+    "Build": [
+        ("Long road ride",
+         "Road cycling — long ride pushing the climbs at 70-80% max HR. "
+         "Practice eating and drinking on the bike to simulate race day."),
+        ("High-intensity intervals",
+         "Road cycling — 5×5 min near-max efforts at 90-95% max HR. "
+         "Full recovery between reps. Builds race-specific power."),
+        ("Threshold ride",
+         "Road cycling — sustained hard effort at 80-90% max HR. "
+         "Hold threshold pace for 2×20 min blocks with 5 min rest between."),
+        ("Active recovery",
+         "Easy cycling, yoga, or light stretching — 50-60% max HR. "
+         "Active recovery reduces soreness and keeps you moving safely."),
+        ("Aerobic base ride",
+         "Road cycling — steady aerobic pace at 65-75% max HR. "
+         "Focus on building your engine for the long event ahead."),
+    ],
+    "Taper": [
+        ("Short endurance ride",
+         "Road cycling — shorter version of your long ride at 65-70% max HR. "
+         "Keep legs fresh — this is not the time to push hard."),
+        ("Light intervals",
+         "Road cycling — 4×3 min moderate efforts at 80-85% max HR. "
+         "Just enough intensity to stay sharp without adding fatigue."),
+        ("Easy tempo ride",
+         "Road cycling — light effort at 70-75% max HR. "
+         "A confidence booster — your body is ready, trust the taper."),
+        ("Gentle recovery spin",
+         "Very easy cycling or yoga — 50% max HR. "
+         "Flush the legs and stay relaxed ahead of your event."),
+        ("Easy road ride",
+         "Road cycling — relaxed conversational pace at 60-65% max HR. "
+         "Enjoy the ride and arrive at race week feeling fresh."),
+    ],
+}
+
+
+def _session_labels(num_sessions: int, phase: str = "Base") -> List[tuple]:
     """
-    Return human-readable labels for a week's training sessions, ordered by
-    intensity (heaviest first). Labels provide transparency to the user
-    (NFR2 in Section 4).
+    Return (description, detail) tuples for a week's training sessions,
+    ordered heaviest-to-lightest. Phase-aware so workout instructions
+    reflect the current training block (NFR2 in Section 4).
+
+    Args:
+        num_sessions: Number of training days this week.
+        phase:        Current training phase ("Base", "Build", or "Taper").
+
+    Returns:
+        A list of (description, detail) tuples, length num_sessions.
     """
-    all_labels = [
-        "Long endurance ride",
-        "Interval session",
-        "Tempo ride",
-        "Recovery spin",
-        "Easy endurance ride",
-    ]
-    return all_labels[:num_sessions]
+    catalogue = SESSION_CATALOGUE.get(phase, SESSION_CATALOGUE["Base"])
+    return catalogue[:num_sessions]
 
 
 def _distribute_weekly_tss(
     weekly_tss: float,
     training_days: List[int],
+    phase: str = "Base",
 ) -> Dict[int, tuple]:
     """
     Split a week's total TSS across the user's available training days using
@@ -127,9 +190,11 @@ def _distribute_weekly_tss(
         weekly_tss:    Total TSS to distribute this week.
         training_days: List of weekday numbers (0=Mon ... 6=Sun) on which the
                        user can train.
+        phase:         Current training phase — used to select appropriate
+                       workout descriptions from SESSION_CATALOGUE.
 
     Returns:
-        A dict mapping weekday -> (target_tss, session_label).
+        A dict mapping weekday -> (target_tss, description, detail).
     """
     num_sessions = len(training_days)
     if num_sessions == 0:
@@ -140,18 +205,18 @@ def _distribute_weekly_tss(
     total_weight = sum(weights)
     weights = [w / total_weight for w in weights]
 
-    labels = _session_labels(num_sessions)
+    session_info = _session_labels(num_sessions, phase)
 
     # Assign the heaviest session to the last available day (typically a
     # weekend long ride), then work backwards.
     ordered_days = sorted(training_days, reverse=True)
 
     distribution: Dict[int, tuple] = {}
-    for day_index, (weight, label) in enumerate(zip(weights, labels)):
+    for day_index, (weight, (description, detail)) in enumerate(zip(weights, session_info)):
         tss = round(weekly_tss * weight, 1)
         # Enforce the daily safety cap (NFR1).
         tss = min(tss, MAX_DAILY_TSS)
-        distribution[ordered_days[day_index]] = (tss, label)
+        distribution[ordered_days[day_index]] = (tss, description, detail)
 
     return distribution
 
@@ -209,20 +274,21 @@ def generate_plan(
         # Enforce the weekly safety cap (NFR1).
         weekly_tss = min(weekly_tss, MAX_WEEKLY_TSS)
 
-        distribution = _distribute_weekly_tss(weekly_tss, training_days)
+        distribution = _distribute_weekly_tss(weekly_tss, training_days, phase)
 
         # ── Build the 7 days of this week ───────────────────────────────────
         for weekday in range(7):
             if weekday in distribution:
-                tss, label = distribution[weekday]
+                tss, description, detail = distribution[weekday]
                 plan.workouts.append(Workout(
                     day=day_counter, week=week, phase=phase,
-                    target_tss=tss, description=label,
+                    target_tss=tss, description=description, detail=detail,
                 ))
             else:
                 plan.workouts.append(Workout(
                     day=day_counter, week=week, phase="Rest",
                     target_tss=0.0, description="Rest day",
+                    detail="No training today — rest and recovery are essential for adaptation.",
                 ))
             day_counter += 1
 
