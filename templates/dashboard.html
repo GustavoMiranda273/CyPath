@@ -40,6 +40,68 @@
     <!-- ── Scrollable content ──────────────────────────────────────────── -->
     <div class="scroll-content">
 
+        <!-- ── GPX confirmation card ────────────────────────────────── -->
+        {% if pending_gpx %}
+        <div class="card gpx-confirm-card">
+            <div class="gpx-confirm-header">
+                <span class="gpx-icon">🚴</span>
+                <div>
+                    <div class="gpx-title">{{ pending_gpx.activity_name }}</div>
+                    <div class="gpx-sub">Review your activity before logging</div>
+                </div>
+            </div>
+
+            <div class="gpx-stats">
+                <div class="gpx-stat">
+                    <div class="gpx-stat-val">{{ pending_gpx.distance_km }}</div>
+                    <div class="gpx-stat-lbl">km</div>
+                </div>
+                <div class="gpx-stat">
+                    <div class="gpx-stat-val">{{ pending_gpx.duration_str }}</div>
+                    <div class="gpx-stat-lbl">duration</div>
+                </div>
+                <div class="gpx-stat">
+                    <div class="gpx-stat-val">{{ pending_gpx.elevation_m | int }}</div>
+                    <div class="gpx-stat-lbl">m climb</div>
+                </div>
+                {% if pending_gpx.avg_hr %}
+                <div class="gpx-stat">
+                    <div class="gpx-stat-val">{{ pending_gpx.avg_hr | int }}</div>
+                    <div class="gpx-stat-lbl">avg bpm</div>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="gpx-method-note">
+                {% if pending_gpx.method == "heart_rate" %}
+                    ❤️ TSS estimated from heart rate data
+                {% else %}
+                    🚀 TSS estimated from average speed (no HR data found)
+                {% endif %}
+            </div>
+
+            <form action="{{ url_for('confirm_gpx') }}" method="POST" class="gpx-confirm-form">
+                <div class="gpx-tss-row">
+                    <label for="actual_tss">Training Stress Score (TSS)</label>
+                    <div class="gpx-tss-input-wrap">
+                        <input type="number" id="actual_tss" name="actual_tss"
+                               value="{{ pending_gpx.estimated_tss }}"
+                               min="0" max="500" step="0.1"
+                               class="gpx-tss-input">
+                        <span class="gpx-tss-unit">TSS</span>
+                    </div>
+                    <div class="gpx-tss-hint">Feel free to adjust if this doesn't feel right</div>
+                </div>
+                <div class="gpx-actions">
+                    <button type="submit" class="primary-btn" style="flex:1;">✓ Log this session</button>
+                    <form action="{{ url_for('dismiss_gpx') }}" method="POST" style="flex:0 0 auto;">
+                        <button type="submit" class="ghost-btn">Dismiss</button>
+                    </form>
+                </div>
+            </form>
+        </div>
+        {% endif %}
+
         <div class="section-label">HOME</div>
 
         <!-- ── Row 1: Path card + Today's roadmap ──────────────────────── -->
@@ -47,10 +109,10 @@
 
             <!-- Path to 100km -->
             <div class="card path-card">
-                <div class="card-title">MY PATH TO 100 KM</div>
+                <div class="card-title">MY PATH TO {{ plan.goal_km | int }} KM</div>
 
                 <!-- Circular progress ring -->
-                {% set pct = ((today_day / 84) * 100) | round(0) | int %}
+                {% set pct = ((today_day / plan.total_days()) * 100) | round(0) | int %}
                 {% set circumference = 188 %}
                 {% set dash = (pct / 100 * circumference) | round(1) %}
                 <div class="ring-wrap">
@@ -65,8 +127,8 @@
                     </div>
                 </div>
 
-                <div class="path-detail">Complete | {{ 84 - today_day }} days to go</div>
-                <div class="path-detail">Week {{ ((today_day - 1) // 7 + 1) }} of 12</div>
+                <div class="path-detail">Complete | {{ plan.total_days() - today_day }} days to go</div>
+                <div class="path-detail">Week {{ ((today_day - 1) // 7 + 1) }} of {{ plan.total_weeks }}</div>
                 <div class="path-detail">
                     {% if today_snap %}
                         CTL: <strong>{{ today_snap.ctl }}</strong>
@@ -113,6 +175,19 @@
                 <form action="{{ url_for('advance_day') }}" method="POST" style="margin-top:10px;">
                     <button type="submit" class="next-day-btn">Next Day →</button>
                 </form>
+
+                <!-- GPX upload -->
+                <div class="gpx-upload-wrap">
+                    <div class="gpx-divider">or import from Strava</div>
+                    <form action="{{ url_for('upload_gpx') }}" method="POST"
+                          enctype="multipart/form-data" class="gpx-upload-form">
+                        <label class="gpx-file-label">
+                            📂 Upload GPX file
+                            <input type="file" name="gpx_file" accept=".gpx"
+                                   onchange="this.form.submit()" style="display:none;">
+                        </label>
+                    </form>
+                </div>
             </div>
 
         </div>
@@ -124,28 +199,57 @@
                 <canvas id="fitnessChart"></canvas>
             </div>
             <div class="chart-legend">
-                <span class="dot" style="background:#3498db"></span>Fitness (CTL)
-                <span class="dot" style="background:#e74c3c; margin-left:10px"></span>Fatigue (ATL)
-                <span class="dot" style="background:#9b59b6; margin-left:10px"></span>Readiness (TSB)
+                <span class="rbar-dot rbar-green"></span> Ready &nbsp;
+                <span class="rbar-dot rbar-amber"></span> Feeling good &nbsp;
+                <span class="rbar-dot rbar-orange"></span> Tired &nbsp;
+                <span class="rbar-dot rbar-red"></span> Overloaded
             </div>
             <!-- Live stats strip -->
             {% if today_snap %}
             <div class="stats-strip">
+                <!-- Fitness status -->
                 <div class="stat-item">
-                    <div class="stat-val" style="color:#3498db">{{ today_snap.ctl }}</div>
-                    <div class="stat-lbl">FITNESS</div>
+                    {% if today_snap.ctl > today_snap.ctl * 0.98 %}
+                        <div class="stat-icon">📈</div>
+                        <div class="stat-label">Fitness building</div>
+                    {% else %}
+                        <div class="stat-icon">➡️</div>
+                        <div class="stat-label">Fitness steady</div>
+                    {% endif %}
+                    <div class="stat-sub">CTL {{ today_snap.ctl }}</div>
                 </div>
                 <div class="stat-divider"></div>
+                <!-- Fatigue status -->
                 <div class="stat-item">
-                    <div class="stat-val" style="color:#e74c3c">{{ today_snap.atl }}</div>
-                    <div class="stat-lbl">FATIGUE</div>
+                    {% if today_snap.atl > today_snap.ctl * 1.5 %}
+                        <div class="stat-icon">😓</div>
+                        <div class="stat-label">High fatigue</div>
+                    {% elif today_snap.atl > today_snap.ctl %}
+                        <div class="stat-icon">😐</div>
+                        <div class="stat-label">Moderate load</div>
+                    {% else %}
+                        <div class="stat-icon">⚡</div>
+                        <div class="stat-label">Feeling fresh</div>
+                    {% endif %}
+                    <div class="stat-sub">ATL {{ today_snap.atl }}</div>
                 </div>
                 <div class="stat-divider"></div>
+                <!-- Readiness status -->
                 <div class="stat-item">
-                    <div class="stat-val" style="color:{% if today_snap.tsb >= 0 %}#27ae60{% else %}#e74c3c{% endif %}">
-                        {{ today_snap.tsb }}
-                    </div>
-                    <div class="stat-lbl">READINESS</div>
+                    {% if today_snap.tsb >= 10 %}
+                        <div class="stat-icon">✅</div>
+                        <div class="stat-label ready">Ready to train</div>
+                    {% elif today_snap.tsb >= 0 %}
+                        <div class="stat-icon">🟡</div>
+                        <div class="stat-label amber">Feeling good</div>
+                    {% elif today_snap.tsb >= -10 %}
+                        <div class="stat-icon">😓</div>
+                        <div class="stat-label orange">Slightly tired</div>
+                    {% else %}
+                        <div class="stat-icon">🔴</div>
+                        <div class="stat-label danger">Heavy load</div>
+                    {% endif %}
+                    <div class="stat-sub">TSB {{ today_snap.tsb }}</div>
                 </div>
             </div>
             {% endif %}
@@ -153,13 +257,13 @@
 
         <!-- ── Next milestone ───────────────────────────────────────────── -->
         {% set current_week = ((today_day - 1) // 7 + 1) %}
-        {% set weeks_left = 12 - current_week %}
+        {% set weeks_left = plan.total_weeks - current_week %}
         <div class="card full-card milestone-card">
             <div class="card-title">NEXT MILESTONE</div>
             <div class="milestone-name">
-                {% if current_week <= 6 %}🏔 END OF BASE PHASE
-                {% elif current_week <= 10 %}⚡ END OF BUILD PHASE
-                {% else %}🏁 RACE DAY — 100 KM SUMMIT{% endif %}
+                {% if current_week <= (plan.total_weeks * 0.5) | int %}🏔 END OF BASE PHASE
+                {% elif current_week <= (plan.total_weeks * 0.83) | int %}⚡ END OF BUILD PHASE
+                {% else %}🏁 RACE DAY — {{ plan.goal_km | int }} KM SUMMIT{% endif %}
             </div>
             <div class="milestone-bar-wrap">
                 <div class="milestone-bar">
@@ -296,11 +400,24 @@
 <!-- ── Chart.js ─────────────────────────────────────────────────────────── -->
 <script>
 (function () {
-    const labels   = {{ chart_labels | tojson }};
-    const ctlData  = {{ chart_ctl    | tojson }};
-    const atlData  = {{ chart_atl    | tojson }};
-    const tsbData  = {{ chart_tsb    | tojson }};
+    const tsbData  = {{ chart_tsb | tojson }};
     const splitIdx = {{ split_index }};
+
+    // Colour each bar based on TSB value:
+    //  green  (≥ 10): ready to train
+    //  amber  (0–10): feeling good
+    //  orange (-10–0): slightly tired
+    //  red    (< -10): overloaded
+    function tsbColour(tsb) {
+        if (tsb >= 10)  return "rgba(39,174,96,0.85)";   // green
+        if (tsb >= 0)   return "rgba(243,156,18,0.85)";  // amber
+        if (tsb >= -10) return "rgba(230,126,34,0.85)";  // orange
+        return "rgba(231,76,60,0.85)";                   // red
+    }
+
+    // Normalise TSB values to bar heights — show absolute value, colour shows sign.
+    // We draw two layers: above zero in cool colours, below zero in warm colours.
+    const barColours = tsbData.map(tsbColour);
 
     const vLinePlugin = {
         id: "vline",
@@ -312,41 +429,55 @@
             ctx.save();
             ctx.beginPath();
             ctx.setLineDash([4, 4]);
-            ctx.strokeStyle = "rgba(0,0,0,0.25)";
+            ctx.strokeStyle = "rgba(0,0,0,0.3)";
             ctx.lineWidth = 1.5;
             ctx.moveTo(x, top);
             ctx.lineTo(x, bottom);
             ctx.stroke();
+            // Label "Today"
+            ctx.font = "10px Arial";
+            ctx.fillStyle = "rgba(0,0,0,0.35)";
+            ctx.fillText("Today", x + 4, top + 12);
             ctx.restore();
         }
     };
 
     new Chart(document.getElementById("fitnessChart").getContext("2d"), {
-        type: "line",
+        type: "bar",
         plugins: [vLinePlugin],
         data: {
-            labels,
-            datasets: [
-                { label: "CTL", data: ctlData, borderColor: "#3498db",
-                  backgroundColor: "rgba(52,152,219,0.08)", borderWidth: 2,
-                  pointRadius: 0, tension: 0.3, fill: true },
-                { label: "ATL", data: atlData, borderColor: "#e74c3c",
-                  borderWidth: 2, pointRadius: 0, tension: 0.3, fill: false },
-                { label: "TSB", data: tsbData, borderColor: "#9b59b6",
-                  borderWidth: 1.5, pointRadius: 0, tension: 0.3, fill: false }
-            ]
+            labels: tsbData.map((_, i) => i),
+            datasets: [{
+                label: "Readiness",
+                data: tsbData,
+                backgroundColor: barColours,
+                borderWidth: 0,
+                borderRadius: 2,
+            }]
         },
         options: {
-            responsive: true, maintainAspectRatio: false,
-            interaction: { mode: "index", intersect: false },
+            responsive: true,
+            maintainAspectRatio: false,
             plugins: {
                 legend: { display: false },
-                tooltip: { callbacks: { title: (i) => `Day ${i[0].dataIndex + 1}` } }
+                tooltip: {
+                    callbacks: {
+                        title: (i) => `Day ${i[0].dataIndex + 1}`,
+                        label: (i) => {
+                            const v = i.raw;
+                            let status = v >= 10 ? "✅ Ready to train"
+                                       : v >= 0  ? "🟡 Feeling good"
+                                       : v >= -10? "😓 Slightly tired"
+                                       :           "🔴 Overloaded";
+                            return `Readiness: ${v.toFixed(1)}  ${status}`;
+                        }
+                    }
+                }
             },
             scales: {
                 x: {
                     ticks: {
-                        maxTicksLimit: 12,
+                        maxTicksLimit: 14,
                         callback: (v, i) => i % 7 === 0 ? `W${Math.floor(i/7)+1}` : "",
                         font: { size: 10 }
                     },
@@ -354,7 +485,13 @@
                 },
                 y: {
                     ticks: { font: { size: 10 } },
-                    grid: { color: "rgba(0,0,0,0.04)" }
+                    grid: { color: "rgba(0,0,0,0.04)" },
+                    title: {
+                        display: true,
+                        text: "Readiness (TSB)",
+                        font: { size: 9 },
+                        color: "#95A5A6"
+                    }
                 }
             }
         }

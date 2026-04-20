@@ -30,6 +30,60 @@
 
         <form action="{{ url_for('create_plan') }}" method="POST">
 
+            <!-- Goal distance + weeks -->
+            <div class="form-group">
+                <label>What is your goal?</label>
+                <div class="goal-grid">
+                    <label class="goal-option">
+                        <input type="radio" name="goal_preset" value="50">
+                        <div class="goal-btn">
+                            <div class="goal-km">50 km</div>
+                            <div class="goal-weeks">6 weeks</div>
+                            <div class="goal-tag">Short challenge</div>
+                        </div>
+                    </label>
+                    <label class="goal-option">
+                        <input type="radio" name="goal_preset" value="75">
+                        <div class="goal-btn">
+                            <div class="goal-km">75 km</div>
+                            <div class="goal-weeks">9 weeks</div>
+                            <div class="goal-tag">Half century</div>
+                        </div>
+                    </label>
+                    <label class="goal-option">
+                        <input type="radio" name="goal_preset" value="100" checked>
+                        <div class="goal-btn">
+                            <div class="goal-km">100 km</div>
+                            <div class="goal-weeks">12 weeks</div>
+                            <div class="goal-tag">Century ride</div>
+                        </div>
+                    </label>
+                    <label class="goal-option">
+                        <input type="radio" name="goal_preset" value="custom" id="customRadio">
+                        <div class="goal-btn">
+                            <div class="goal-km">Custom</div>
+                            <div class="goal-weeks">You choose</div>
+                            <div class="goal-tag">Your own goal</div>
+                        </div>
+                    </label>
+                </div>
+                <!-- Custom inputs — shown only when Custom is selected -->
+                <div id="customInputs" style="display:none; margin-top:12px;">
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                        <div>
+                            <label style="font-size:11px; margin-bottom:4px; display:block;">Distance (km)</label>
+                            <input type="number" name="custom_km" placeholder="e.g. 120" min="10" max="1000"
+                                   style="width:100%; padding:10px; border:1.5px solid var(--border); border-radius:8px; font-size:14px;">
+                        </div>
+                        <div>
+                            <label style="font-size:11px; margin-bottom:4px; display:block;">Weeks</label>
+                            <input type="number" name="custom_weeks" placeholder="e.g. 16" min="4" max="52"
+                                   style="width:100%; padding:10px; border:1.5px solid var(--border); border-radius:8px; font-size:14px;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Fitness level -->
             <div class="form-group">
                 <label>Your fitness level</label>
@@ -76,5 +130,13 @@
     </div>
 
 </div>
+<script>
+document.querySelectorAll('input[name="goal_preset"]').forEach(function(radio) {
+    radio.addEventListener('change', function() {
+        document.getElementById('customInputs').style.display =
+            this.value === 'custom' ? 'block' : 'none';
+    });
+});
+</script>
 </body>
 </html>

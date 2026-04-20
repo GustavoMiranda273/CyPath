@@ -137,7 +137,7 @@ def compute_curve(
 
     snapshots: List[DaySnapshot] = []
 
-    for day_num in range(1, 85):
+    for day_num in range(1, plan.total_days() + 1):
         workout = workout_map.get(day_num)
         is_projected = day_num > today_day
 

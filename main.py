@@ -29,6 +29,7 @@ from flask import (
 )
 
 from engine.scheduler import generate_plan, TrainingPlan
+from engine.gpx_parser import parse_gpx, GPXSummary
 from engine.banister_model import compute_curve
 from engine.reoptimiser import (
     mark_missed, mark_completed, restore_planned, ReoptimisationResult,
@@ -84,7 +85,6 @@ def create_plan():
     profile = request.form.get("profile", "intermediate")
 
     # Training days arrive as a list of strings (e.g. ['1', '3', '5', '6']).
-    # Convert to ints for the scheduler.
     training_days = [int(d) for d in request.form.getlist("training_days")]
 
     if not training_days:
@@ -93,11 +93,29 @@ def create_plan():
 
     recovery_weeks = request.form.get("recovery_weeks") == "on"
 
+    # Goal — preset options map to (goal_km, total_weeks); custom lets the
+    # user specify both directly.
+    goal_preset = request.form.get("goal_preset", "100")
+    PRESET_MAP = {"50": (50.0, 6), "75": (75.0, 9), "100": (100.0, 12)}
+    if goal_preset in PRESET_MAP:
+        goal_km, total_weeks = PRESET_MAP[goal_preset]
+    else:
+        # Custom — read individual fields with safe fallbacks.
+        try:
+            goal_km     = float(request.form.get("custom_km",    "100"))
+            total_weeks = int(request.form.get("custom_weeks", "12"))
+            goal_km     = max(10.0, min(goal_km, 1000.0))
+            total_weeks = max(4,    min(total_weeks, 52))
+        except ValueError:
+            goal_km, total_weeks = 100.0, 12
+
     try:
         plan = generate_plan(
             profile=profile,
             training_days=training_days,
             recovery_weeks=recovery_weeks,
+            goal_km=goal_km,
+            total_weeks=total_weeks,
         )
     except ValueError as e:
         flash(f"Could not generate plan: {e}")
@@ -135,7 +153,7 @@ def dashboard():
 
     # ── Group workouts by week for the plan table ────────────────────────────
     weeks = []
-    for week_number in range(1, 13):
+    for week_number in range(1, plan.total_weeks + 1):
         weeks.append({
             "number":    week_number,
             "phase":     next(
@@ -151,6 +169,7 @@ def dashboard():
     today_workout = next((w for w in plan.workouts if w.day == today_day), None)
     today_snap    = curve[today_day - 1] if curve else None
 
+    pending_gpx = session.get("pending_gpx")
     return render_template(
         "dashboard.html",
         plan=plan,
@@ -166,6 +185,7 @@ def dashboard():
         STATUS_COMPLETED=STATUS_COMPLETED,
         STATUS_MISSED=STATUS_MISSED,
         STATUS_PLANNED=STATUS_PLANNED,
+        pending_gpx=pending_gpx,
     )
 
 
@@ -181,7 +201,7 @@ def complete_session():
         mark_completed(plan, day)
         flash(f"Day {day} marked as completed. 💪")
         if session.get("today_day", 1) == day:
-            session["today_day"] = min(day + 1, 84)
+            session["today_day"] = min(day + 1, plan.total_days())
     except ValueError as e:
         flash(str(e))
 
@@ -214,7 +234,7 @@ def miss_session():
     flash(summary)
 
     if session.get("today_day", 1) == day:
-        session["today_day"] = min(day + 1, 84)
+        session["today_day"] = min(day + 1, plan.total_days())
 
     return redirect(url_for("dashboard"))
 
@@ -225,8 +245,11 @@ def advance_day():
     Manually advance today_day by one. Useful during the usability evaluation
     to simulate time passing without logging every workout.
     """
+    plan = _current_plan()
+    if plan is None:
+        return redirect(url_for("index"))
     current = session.get("today_day", 1)
-    session["today_day"] = min(current + 1, 84)
+    session["today_day"] = min(current + 1, plan.total_days())
     return redirect(url_for("dashboard"))
 
 
@@ -252,6 +275,99 @@ def reset():
     """Discard the current plan so the user can create a new one."""
     PLANS.pop(_session_id(), None)
     return redirect(url_for("index"))
+
+
+# ─── GPX import ──────────────────────────────────────────────────────────────
+
+@app.route("/upload-gpx", methods=["POST"])
+def upload_gpx():
+    """
+    Accept a GPX file, parse it, and store the summary in the session so the
+    confirmation card can be shown on the dashboard.
+    """
+    plan = _current_plan()
+    if plan is None:
+        return redirect(url_for("index"))
+
+    gpx_file = request.files.get("gpx_file")
+    if not gpx_file or gpx_file.filename == "":
+        flash("No file selected. Please choose a .gpx file.")
+        return redirect(url_for("dashboard"))
+
+    if not gpx_file.filename.lower().endswith(".gpx"):
+        flash("Only .gpx files are supported.")
+        return redirect(url_for("dashboard"))
+
+    try:
+        summary = parse_gpx(gpx_file.read())
+    except ValueError as e:
+        flash(f"Could not read GPX file: {e}")
+        return redirect(url_for("dashboard"))
+
+    # Store parsed summary in session for the confirmation step.
+    session["pending_gpx"] = {
+        "day":           session.get("today_day", 1),
+        "distance_km":   summary.distance_km,
+        "duration_str":  summary.duration_str,
+        "elevation_m":   summary.elevation_gain_m,
+        "avg_hr":        summary.avg_hr_bpm,
+        "estimated_tss": summary.estimated_tss,
+        "method":        summary.method,
+        "activity_name": summary.activity_name,
+    }
+    return redirect(url_for("dashboard"))
+
+
+@app.route("/confirm-gpx", methods=["POST"])
+def confirm_gpx():
+    """
+    Log the GPX session with the (possibly user-adjusted) TSS value.
+    Updates the workout's target_tss to the actual value before marking
+    it completed, so the Banister model reflects real training data.
+    """
+    plan = _current_plan()
+    if plan is None:
+        return redirect(url_for("index"))
+
+    pending = session.pop("pending_gpx", None)
+    if pending is None:
+        flash("No pending GPX session to confirm.")
+        return redirect(url_for("dashboard"))
+
+    try:
+        actual_tss = float(request.form.get("actual_tss", pending["estimated_tss"]))
+        actual_tss = max(0.0, round(actual_tss, 1))
+    except ValueError:
+        actual_tss = pending["estimated_tss"]
+
+    day = pending["day"]
+
+    # Update the workout's target_tss to the actual GPX value so the
+    # Banister model tracks real load rather than the scheduled estimate.
+    for w in plan.workouts:
+        if w.day == day:
+            w.target_tss = actual_tss
+            break
+
+    try:
+        mark_completed(plan, day)
+        if session.get("today_day", 1) == day:
+            session["today_day"] = min(day + 1, plan.total_days())
+        flash(
+            f"GPX session logged — {pending['distance_km']} km · "
+            f"{pending['duration_str']} · {actual_tss} TSS recorded."
+        )
+    except ValueError as e:
+        flash(str(e))
+
+    return redirect(url_for("dashboard"))
+
+
+@app.route("/dismiss-gpx", methods=["POST"])
+def dismiss_gpx():
+    """Dismiss the GPX confirmation card without logging."""
+    session.pop("pending_gpx", None)
+    return redirect(url_for("dashboard"))
 
 
 # ─── JSON API (used by future frontend / for testing) ────────────────────────

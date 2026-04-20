@@ -72,32 +72,107 @@ class Workout:
 
 @dataclass
 class TrainingPlan:
-    """A full 12-week periodised plan."""
-    profile:   str
-    start_ctl: float
-    workouts:  List[Workout] = field(default_factory=list)
+    """A full N-week periodised plan for a user-defined distance goal."""
+    profile:     str
+    start_ctl:   float
+    goal_km:     float = 100.0   # Target event distance in kilometres
+    total_weeks: int   = 12      # Total plan duration in weeks
+    workouts:    List[Workout] = field(default_factory=list)
 
     def weekly_tss(self, week_number: int) -> float:
         """Return the total prescribed TSS for a given week."""
         return sum(w.target_tss for w in self.workouts if w.week == week_number)
 
+    def total_days(self) -> int:
+        """Total number of days in the plan."""
+        return self.total_weeks * 7
+
     def to_dict(self) -> Dict:
         """Convert to a dictionary for JSON serialisation (used by the API)."""
         return {
-            "profile":   self.profile,
-            "start_ctl": self.start_ctl,
-            "workouts":  [w.__dict__ for w in self.workouts],
+            "profile":     self.profile,
+            "start_ctl":   self.start_ctl,
+            "goal_km":     self.goal_km,
+            "total_weeks": self.total_weeks,
+            "workouts":    [w.__dict__ for w in self.workouts],
         }
 
 
 # ─── Core scheduling logic ───────────────────────────────────────────────────
 
-def _phase_for_week(week: int) -> str:
-    """Return the phase name for a given week number (1-12)."""
-    for name, start, end in PHASES:
+def _build_phase_structure(total_weeks: int) -> List[tuple]:
+    """
+    Dynamically compute the Base/Build/Taper phase boundaries for any plan
+    length. Phases are proportional: Base ~50%, Build ~33%, Taper ~17%.
+
+    Args:
+        total_weeks: Total number of weeks in the plan.
+
+    Returns:
+        A list of (phase_name, start_week, end_week) tuples.
+    """
+    base_end  = max(1, round(total_weeks * 0.50))
+    build_end = max(base_end + 1, round(total_weeks * 0.83))
+    taper_end = total_weeks
+    return [
+        ("Base",  1,            base_end),
+        ("Build", base_end + 1, build_end),
+        ("Taper", build_end + 1, taper_end),
+    ]
+
+
+def _phase_for_week(week: int, phases: List[tuple] = None) -> str:
+    """Return the phase name for a given week number."""
+    if phases is None:
+        phases = PHASES   # Fall back to the static 12-week default.
+    for name, start, end in phases:
         if start <= week <= end:
             return name
-    raise ValueError(f"Week {week} is outside the 12-week plan")
+    raise ValueError(f"Week {week} is outside the plan")
+
+
+def _build_multipliers(phases: List[tuple], recovery_weeks: bool) -> Dict[int, float]:
+    """
+    Generate per-week TSS multipliers for any plan length.
+
+    Within each phase the load follows the same pattern as the original
+    12-week plan, scaled to however many weeks the phase contains:
+      Base  — ramp from 0.70 to 1.10, with a recovery dip every 4th week
+      Build — ramp from 1.20 to 1.40, with a mid-phase recovery dip
+      Taper — step down from 0.75 to 0.50
+
+    Args:
+        phases:         Output of _build_phase_structure().
+        recovery_weeks: Whether to include de-load weeks.
+
+    Returns:
+        Dict mapping week_number -> multiplier.
+    """
+    multipliers: Dict[int, float] = {}
+
+    for phase_name, start, end in phases:
+        n = end - start + 1  # Number of weeks in this phase.
+        for i, week in enumerate(range(start, end + 1)):
+            position = i / max(n - 1, 1)  # 0.0 … 1.0 within the phase.
+
+            if phase_name == "Base":
+                # Ramp from 0.70 to 1.10 with optional recovery dips.
+                base_mult = 0.70 + position * 0.40
+                # Every 4th week in Base is a recovery week.
+                if recovery_weeks and (i + 1) % 4 == 0 and i < n - 1:
+                    base_mult *= 0.65
+            elif phase_name == "Build":
+                # Ramp from 1.20 to 1.40, mid-phase dip if long enough.
+                base_mult = 1.20 + position * 0.20
+                if recovery_weeks and n >= 3 and i == n // 2:
+                    base_mult *= 0.72
+            else:  # Taper
+                # Step down from 0.75 to 0.50.
+                base_mult = 0.75 - position * 0.25
+
+            multipliers[week] = round(base_mult, 3)
+
+    return multipliers
 
 
 # ─── Phase-aware session catalogue ──────────────────────────────────────────
@@ -221,22 +296,35 @@ def _distribute_weekly_tss(
     return distribution
 
 
+# ─── Goal presets ────────────────────────────────────────────────────────────
+# Maps a distance goal to a recommended number of training weeks and a TSS
+# scale factor relative to the 100 km baseline.
+GOAL_PRESETS: Dict[float, tuple] = {
+    50.0:  (6,  0.60),   # 50 km in 6 weeks  — 60% of peak TSS
+    75.0:  (9,  0.80),   # 75 km in 9 weeks  — 80% of peak TSS
+    100.0: (12, 1.00),   # 100 km in 12 weeks — full TSS (baseline)
+}
+
+
 def generate_plan(
     profile: str,
     training_days: List[int],
     recovery_weeks: bool = True,
+    goal_km: float = 100.0,
+    total_weeks: int = 12,
 ) -> TrainingPlan:
     """
-    Generate a full 12-week training plan.
+    Generate a periodised training plan for a user-defined distance goal.
 
     Args:
         profile:        One of "beginner", "intermediate", or "experienced".
         training_days:  Weekdays the user can train on (0=Mon ... 6=Sun).
-        recovery_weeks: If True, weeks 4 and 9 are de-loaded. If False, those
-                        weeks follow a smoother progression instead.
+        recovery_weeks: If True, de-load weeks are inserted periodically.
+        goal_km:        Target event distance in kilometres.
+        total_weeks:    Total plan duration in weeks.
 
     Returns:
-        A TrainingPlan object containing 84 Workout entries (one per day).
+        A TrainingPlan containing (total_weeks × 7) Workout entries.
     """
 
     # ── Validate inputs ──────────────────────────────────────────────────────
@@ -247,36 +335,38 @@ def generate_plan(
         )
     if not training_days or not all(0 <= d <= 6 for d in training_days):
         raise ValueError("training_days must be a non-empty list of 0-6 values")
+    if total_weeks < 4:
+        raise ValueError("total_weeks must be at least 4")
 
-    # ── Derive the target weekly TSS from the starting CTL ──────────────────
-    # A common rule of thumb is that sustainable weekly TSS ≈ 7 × CTL.
+    # ── Derive target weekly TSS ─────────────────────────────────────────────
+    # Sustainable weekly TSS ≈ 7 × CTL (standard coaching rule of thumb).
+    # Scale by the goal's TSS factor so shorter events don't over-stress.
     start_ctl = FITNESS_PROFILES[profile]
-    base_weekly_tss = start_ctl * 7
+    # Find the closest preset to get the TSS scale factor.
+    closest_preset = min(GOAL_PRESETS.keys(), key=lambda k: abs(k - goal_km))
+    _, tss_scale = GOAL_PRESETS[closest_preset]
+    base_weekly_tss = start_ctl * 7 * tss_scale
 
-    plan = TrainingPlan(profile=profile, start_ctl=start_ctl)
+    # ── Build dynamic phase structure and multipliers ────────────────────────
+    phases      = _build_phase_structure(total_weeks)
+    multipliers = _build_multipliers(phases, recovery_weeks)
+
+    plan = TrainingPlan(
+        profile=profile,
+        start_ctl=start_ctl,
+        goal_km=goal_km,
+        total_weeks=total_weeks,
+    )
 
     # ── Build the plan week by week ──────────────────────────────────────────
     day_counter = 1
-    for week in range(1, 13):
-        phase = _phase_for_week(week)
-
-        # Get the weekly multiplier for this phase/week.
-        multiplier = PHASE_LOAD_MULTIPLIERS[phase][week]
-
-        # If recovery weeks are disabled, replace them with a smoother value.
-        if not recovery_weeks and week in (4, 9):
-            # Interpolate between the neighbouring weeks.
-            prev_mult = PHASE_LOAD_MULTIPLIERS[_phase_for_week(week - 1)][week - 1]
-            next_mult = PHASE_LOAD_MULTIPLIERS[_phase_for_week(week + 1)][week + 1]
-            multiplier = (prev_mult + next_mult) / 2
-
-        weekly_tss = base_weekly_tss * multiplier
-        # Enforce the weekly safety cap (NFR1).
-        weekly_tss = min(weekly_tss, MAX_WEEKLY_TSS)
+    for week in range(1, total_weeks + 1):
+        phase      = _phase_for_week(week, phases)
+        multiplier = multipliers[week]
+        weekly_tss = min(base_weekly_tss * multiplier, MAX_WEEKLY_TSS)
 
         distribution = _distribute_weekly_tss(weekly_tss, training_days, phase)
 
-        # ── Build the 7 days of this week ───────────────────────────────────
         for weekday in range(7):
             if weekday in distribution:
                 tss, description, detail = distribution[weekday]

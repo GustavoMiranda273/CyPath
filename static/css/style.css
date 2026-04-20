@@ -715,3 +715,151 @@ body {
 .day-desc { display: flex; flex-direction: column; gap: 2px; }
 .day-desc-title { font-size: 12px; color: var(--body); font-weight: 500; }
 .day-desc-sub   { font-size: 10px; color: var(--muted); line-height: 1.3; }
+
+/* ── Goal selector grid ─────────────────────────────────────────────────── */
+.goal-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+.goal-option { cursor: pointer; }
+.goal-option input[type="radio"] { display: none; }
+.goal-btn {
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 8px;
+    text-align: center;
+    background: white;
+    transition: all 0.15s;
+}
+.goal-option input[type="radio"]:checked + .goal-btn {
+    border-color: var(--orange);
+    background: rgba(230,126,34,0.06);
+}
+.goal-km    { font-size: 20px; font-weight: 800; color: var(--navy); }
+.goal-weeks { font-size: 12px; color: var(--orange); font-weight: 600; margin: 2px 0; }
+.goal-tag   { font-size: 10px; color: var(--muted); }
+
+/* ── Plain English stat strip ───────────────────────────────────────────── */
+.stat-icon  { font-size: 20px; margin-bottom: 4px; }
+.stat-label { font-size: 11px; font-weight: 700; color: var(--navy); }
+.stat-label.ready  { color: var(--success); }
+.stat-label.amber  { color: #F39C12; }
+.stat-label.orange { color: var(--orange); }
+.stat-label.danger { color: var(--danger); }
+.stat-sub   { font-size: 9px; color: var(--muted); margin-top: 3px; letter-spacing: 0.3px; }
+
+/* ── Readiness bar chart legend dots ────────────────────────────────────── */
+.rbar-dot {
+    display: inline-block;
+    width: 10px; height: 10px;
+    border-radius: 2px;
+    vertical-align: middle;
+}
+.rbar-green  { background: rgba(39,174,96,0.85); }
+.rbar-amber  { background: rgba(243,156,18,0.85); }
+.rbar-orange { background: rgba(230,126,34,0.85); }
+.rbar-red    { background: rgba(231,76,60,0.85); }
+
+/* ── GPX upload button ───────────────────────────────────────────────────── */
+.gpx-upload-wrap  { margin-top: 10px; }
+.gpx-divider {
+    text-align: center;
+    font-size: 10px;
+    color: var(--muted);
+    margin-bottom: 6px;
+    position: relative;
+}
+.gpx-divider::before, .gpx-divider::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    width: 28%;
+    height: 1px;
+    background: var(--border);
+}
+.gpx-divider::before { left: 0; }
+.gpx-divider::after  { right: 0; }
+.gpx-file-label {
+    display: block;
+    text-align: center;
+    padding: 8px;
+    border: 1.5px dashed var(--border);
+    border-radius: 8px;
+    font-size: 11px;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.gpx-file-label:hover {
+    border-color: var(--orange);
+    color: var(--orange);
+    background: rgba(230,126,34,0.04);
+}
+
+/* ── GPX confirmation card ───────────────────────────────────────────────── */
+.gpx-confirm-card {
+    border-left: 4px solid var(--orange);
+    margin-bottom: 12px;
+}
+.gpx-confirm-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+.gpx-icon   { font-size: 28px; }
+.gpx-title  { font-size: 14px; font-weight: 700; color: var(--navy); }
+.gpx-sub    { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+.gpx-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 12px;
+}
+.gpx-stat       { text-align: center; }
+.gpx-stat-val   { font-size: 20px; font-weight: 700; color: var(--navy); }
+.gpx-stat-lbl   { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+
+.gpx-method-note {
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 14px;
+    padding: 8px 10px;
+    background: #F9FAFB;
+    border-radius: 6px;
+}
+
+.gpx-tss-row    { margin-bottom: 14px; }
+.gpx-tss-row label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--navy);
+    margin-bottom: 6px;
+}
+.gpx-tss-input-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.gpx-tss-input {
+    width: 100px;
+    padding: 10px 12px;
+    font-size: 20px;
+    font-weight: 700;
+    border: 2px solid var(--orange);
+    border-radius: 8px;
+    text-align: center;
+    color: var(--navy);
+}
+.gpx-tss-unit   { font-size: 13px; color: var(--muted); font-weight: 600; }
+.gpx-tss-hint   { font-size: 10px; color: var(--muted); margin-top: 4px; }
+
+.gpx-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+.gpx-confirm-form { width: 100%; }
