@@ -1,25 +1,3 @@
-"""
-CyPath API Gateway
-Flask application that exposes the CyPath algorithmic engine to the frontend.
-
-Routes:
-    GET  /                   -> Onboarding form (profile + training days)
-    POST /generate-plan      -> Build a 12-week plan and redirect to dashboard
-    GET  /dashboard          -> Main dashboard view of the current plan
-    POST /complete-session   -> Mark a day's workout as completed
-    POST /miss-session       -> Mark a day as missed; triggers re-optimisation
-    POST /restore-session    -> Undo a missed/completed flag (revert to planned)
-    GET  /api/plan           -> Return the current plan as JSON
-
-State management:
-    For this university prototype, plans are stored in a simple in-memory
-    dictionary keyed by Flask session ID. This is appropriate for the single-
-    user evaluation scope defined in the ethics approval (ID 70224).
-    Production deployments would substitute a proper database; this is noted
-    as future work in Section 7.
-
-Author: Gustavo Miranda
-"""
 
 import uuid
 from typing import Optional
@@ -384,4 +362,4 @@ def api_plan():
 # ─── Entry point ─────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=False, host="0.0.0.0", port=5000)
