@@ -1,26 +1,3 @@
-"""
-CyPath Re-optimisation Engine
-Dynamically redistributes the training load when a session is missed, keeping
-the user safely on track towards their event goal without generating dangerous
-"catch-up" workouts.
-
-Behaviour:
-  - When a planned session is marked as missed, its TSS is redistributed
-    proportionally across the REMAINING training days of the same week.
-  - The hard safety cap of 150 TSS per day is strictly enforced. If a day
-    would exceed the cap, the excess is spread across the other eligible days.
-  - If the weekly safety budget cannot absorb all of the missed load, the
-    remainder is dropped and reported to the user as a warning.
-  - Sessions can also be marked as completed or restored to planned status,
-    supporting an undo action.
-
-This module depends only on the data model defined in scheduler.py, keeping
-physiological modelling (banister_model.py) and plan generation (scheduler.py)
-as independent concerns.
-
-Author: Gustavo Miranda
-"""
-
 from dataclasses import dataclass
 from typing import List, Optional
 
@@ -38,10 +15,7 @@ STATUS_MISSED    = "missed"
 
 @dataclass
 class ReoptimisationResult:
-    """
-    Reports what happened during a re-optimisation attempt, providing
-    transparency to the user (NFR2 in Section 4).
-    """
+  
     success:           bool           # True if all missed load was redistributed
     missed_tss:        float          # The TSS that was originally scheduled
     redistributed_tss: float          # How much was successfully reallocated
@@ -53,13 +27,7 @@ class ReoptimisationResult:
 # ─── Helpers ─────────────────────────────────────────────────────────────────
 
 def _ensure_status_fields(plan: TrainingPlan) -> None:
-    """
-    Ensure every workout has a `status` attribute.
-
-    The core scheduler produces workouts without a status field (to keep that
-    module purely concerned with plan generation). The re-optimiser attaches
-    status tracking here on first use.
-    """
+  
     for w in plan.workouts:
         if not hasattr(w, "status"):
             # Rest days are trivially completed; training days start as planned.
@@ -69,12 +37,7 @@ def _ensure_status_fields(plan: TrainingPlan) -> None:
 def _remaining_training_days(
     plan: TrainingPlan, week: int, after_day: int
 ) -> List[Workout]:
-    """
-    Return the list of training days in the given week that:
-      - occur AFTER the supplied day number,
-      - are not rest days,
-      - still have status 'planned' (i.e. not already completed/missed).
-    """
+   
     return [
         w for w in plan.workouts
         if w.week == week
@@ -88,22 +51,7 @@ def _redistribute(
     eligible: List[Workout],
     tss_to_place: float,
 ) -> float:
-    """
-    Place `tss_to_place` across the eligible workouts proportionally to their
-    current target_tss, respecting the MAX_DAILY_TSS safety cap.
-
-    Algorithm:
-      Repeatedly allocate a proportional share to every day that still has
-      spare capacity. Days that reach the cap drop out of the active pool.
-      The loop terminates when either all TSS is placed or no capacity remains.
-
-    Args:
-        eligible:      Workouts to redistribute into (modified in place).
-        tss_to_place:  Total TSS to add across the pool.
-
-    Returns:
-        The amount of TSS that could NOT be placed (dropped).
-    """
+   
     if tss_to_place <= 0 or not eligible:
         return tss_to_place
 
@@ -111,15 +59,11 @@ def _redistribute(
     active = [w for w in eligible if w.target_tss < MAX_DAILY_TSS]
     remaining = tss_to_place
 
-    # Defensive iteration cap — we should never need more than len(eligible)
-    # passes, but guard against any unforeseen edge case.
     max_passes = len(eligible) + 2
 
     while remaining > 0.1 and active and max_passes > 0:
         max_passes -= 1
 
-        # Base proportional share on existing target_tss. If every active day
-        # happens to be at zero, split evenly.
         total_weight = sum(w.target_tss for w in active) or float(len(active))
 
         to_remove: List[Workout] = []
@@ -167,13 +111,7 @@ def mark_completed(plan: TrainingPlan, day: int) -> None:
 
 
 def restore_planned(plan: TrainingPlan, day: int) -> None:
-    """
-    Restore a workout to 'planned' status. Useful for undoing an accidental
-    'mark as missed' action.
-
-    Note: if the workout's TSS has already been redistributed, the caller
-    should consider regenerating the week rather than relying on this alone.
-    """
+    
     _ensure_status_fields(plan)
     for w in plan.workouts:
         if w.day == day:
@@ -183,21 +121,7 @@ def restore_planned(plan: TrainingPlan, day: int) -> None:
 
 
 def mark_missed(plan: TrainingPlan, day: int) -> ReoptimisationResult:
-    """
-    Mark a workout as missed and redistribute its TSS across the remaining
-    training days of the same week, respecting the daily safety cap.
-
-    Args:
-        plan: The TrainingPlan to modify (modified in place).
-        day:  The day number (1-84) of the missed session.
-
-    Returns:
-        ReoptimisationResult describing what was redistributed, dropped, and
-        whether any warnings apply.
-
-    Raises:
-        ValueError if the day does not exist or is not a planned training day.
-    """
+    
     _ensure_status_fields(plan)
 
     # ── Locate the missed workout ────────────────────────────────────────────

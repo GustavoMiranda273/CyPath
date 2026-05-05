@@ -1,23 +1,3 @@
-"""
-CyPath Banister Model
-Implements the Banister Fitness-Fatigue (Impulse-Response) model.
-
-The model tracks two competing physiological processes driven by daily
-Training Stress Score (TSS):
-
-  Fitness  (CTL) — a slow-decaying measure of chronic training adaptation
-                    (τ = 42 days, the 'positive' function)
-  Fatigue  (ATL) — a fast-decaying measure of acute training stress
-                    (τ = 7 days, the 'negative' function)
-  Readiness (TSB) = Fitness - Fatigue
-
-compute_curve() extends the core class to project a full 84-day curve
-from a TrainingPlan, combining historical (completed/missed) days with
-future projections from planned sessions.
-
-Author: Gustavo Miranda
-References: Banister (1991); Hellard et al. (2006)
-"""
 
 import math
 from dataclasses import dataclass
@@ -42,11 +22,6 @@ class DaySnapshot:
 
 
 class BanisterModel:
-    """
-    Implementation of the Banister Fitness-Fatigue (Training Impulse) model.
-    Tracks chronic training load (fitness) and acute training load (fatigue)
-    using exponential decay.
-    """
 
     def __init__(self, initial_fitness: float = 0.0, initial_fatigue: float = 0.0):
         """
@@ -95,32 +70,7 @@ def compute_curve(
     plan: "TrainingPlan",
     today_day: int = 1,
 ) -> List[DaySnapshot]:
-    """
-    Walk all 84 days of a TrainingPlan and compute the CTL/ATL/TSB value at
-    the end of each day, returning a full fitness curve.
-
-    For days up to and including today_day:
-      - Completed sessions:  use the workout's target_tss as the actual load
-      - Missed sessions:     use 0.0 TSS (the session did not happen)
-      - Rest days:           use 0.0 TSS (no training)
-
-    For days after today_day (future projections):
-      - Planned sessions:    use target_tss as the projected load
-      - Rest days:           use 0.0 TSS
-
-    The initial CTL and ATL are seeded from the plan's start_ctl value using
-    the same approach as the scheduler — this ensures the curve starts at the
-    user's declared fitness level rather than zero.
-
-    Args:
-        plan:      The TrainingPlan to evaluate.
-        today_day: The current day (1-84). Days <= today_day are treated as
-                   historical; days > today_day are projected. Defaults to 1
-                   (i.e. all days projected) when the plan has just been created.
-
-    Returns:
-        A list of 84 DaySnapshot objects, one per day.
-    """
+    
     from engine.reoptimiser import STATUS_COMPLETED, STATUS_MISSED
 
     # Seed initial fitness/fatigue from the user's starting CTL. We use a

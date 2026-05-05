@@ -1,31 +1,3 @@
-"""
-CyPath GPX Parser
-Parses a GPX file exported from Strava (or any compatible device) and
-estimates the Training Stress Score (TSS) for the session.
-
-Supported data sources:
-  - GPS coordinates + timestamps  → distance (km) and duration (seconds)
-  - Elevation data                → total climbing (metres)
-  - Heart rate extensions         → avg HR → TRIMP-based TSS estimate
-  - No HR data                    → speed-based intensity estimate
-
-TSS formulae
-────────────
-With heart rate:
-    intensity = avg_hr / ESTIMATED_MAX_HR   (185 bpm — reasonable cycling average)
-    TSS = (duration_hrs × intensity²) × 100
-
-Without heart rate (speed proxy):
-    intensity = lookup from average speed bands
-    TSS = (duration_hrs × intensity²) × 100
-
-These are estimates, not precise power-based calculations.
-The confirmation screen lets the user adjust the value before logging.
-
-Author: Gustavo Miranda
-References: Borresen & Lambert (2009); Coggan & Allen (2010)
-"""
-
 import math
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
@@ -133,18 +105,7 @@ def _find_hr(trkpt: ET.Element) -> Optional[float]:
 # ─── Public API ──────────────────────────────────────────────────────────────
 
 def parse_gpx(file_bytes: bytes) -> GPXSummary:
-    """
-    Parse a GPX file and return activity metrics and a TSS estimate.
 
-    Args:
-        file_bytes: Raw bytes of the .gpx file.
-
-    Returns:
-        A GPXSummary with distance, duration, elevation, HR, and TSS.
-
-    Raises:
-        ValueError: If the file cannot be parsed or contains no track points.
-    """
     try:
         root = ET.fromstring(file_bytes)
     except ET.ParseError as e:

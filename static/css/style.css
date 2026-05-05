@@ -1,7 +1,3 @@
-/* CyPath — polished mobile-first stylesheet
-   Matches the Gemini mockup aesthetic: light grey background, white cards,
-   orange accent, dark navy profile banner, bottom navigation.
-*/
 
 /* ── Reset & base ───────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }

@@ -1,16 +1,4 @@
-"""
-CyPath Scheduler
-Generates a 12-week periodised training plan structured into Base, Build, and
-Taper phases, following established endurance training principles.
 
-The scheduler produces a day-by-day prescribed Training Stress Score (TSS)
-for each day of the 12-week plan, respecting:
-  - The user's self-declared fitness level (beginner/intermediate/experienced)
-  - The user's available training days per week
-  - Hard safety caps on daily and weekly TSS
-
-Author: Gustavo Miranda
-"""
 
 from dataclasses import dataclass, field
 from typing import List, Dict
@@ -101,16 +89,7 @@ class TrainingPlan:
 # ─── Core scheduling logic ───────────────────────────────────────────────────
 
 def _build_phase_structure(total_weeks: int) -> List[tuple]:
-    """
-    Dynamically compute the Base/Build/Taper phase boundaries for any plan
-    length. Phases are proportional: Base ~50%, Build ~33%, Taper ~17%.
-
-    Args:
-        total_weeks: Total number of weeks in the plan.
-
-    Returns:
-        A list of (phase_name, start_week, end_week) tuples.
-    """
+ 
     base_end  = max(1, round(total_weeks * 0.50))
     build_end = max(base_end + 1, round(total_weeks * 0.83))
     taper_end = total_weeks
@@ -132,22 +111,7 @@ def _phase_for_week(week: int, phases: List[tuple] = None) -> str:
 
 
 def _build_multipliers(phases: List[tuple], recovery_weeks: bool) -> Dict[int, float]:
-    """
-    Generate per-week TSS multipliers for any plan length.
-
-    Within each phase the load follows the same pattern as the original
-    12-week plan, scaled to however many weeks the phase contains:
-      Base  — ramp from 0.70 to 1.10, with a recovery dip every 4th week
-      Build — ramp from 1.20 to 1.40, with a mid-phase recovery dip
-      Taper — step down from 0.75 to 0.50
-
-    Args:
-        phases:         Output of _build_phase_structure().
-        recovery_weeks: Whether to include de-load weeks.
-
-    Returns:
-        Dict mapping week_number -> multiplier.
-    """
+   
     multipliers: Dict[int, float] = {}
 
     for phase_name, start, end in phases:
@@ -236,18 +200,7 @@ SESSION_CATALOGUE: Dict[str, List[tuple]] = {
 
 
 def _session_labels(num_sessions: int, phase: str = "Base") -> List[tuple]:
-    """
-    Return (description, detail) tuples for a week's training sessions,
-    ordered heaviest-to-lightest. Phase-aware so workout instructions
-    reflect the current training block (NFR2 in Section 4).
-
-    Args:
-        num_sessions: Number of training days this week.
-        phase:        Current training phase ("Base", "Build", or "Taper").
-
-    Returns:
-        A list of (description, detail) tuples, length num_sessions.
-    """
+   
     catalogue = SESSION_CATALOGUE.get(phase, SESSION_CATALOGUE["Base"])
     return catalogue[:num_sessions]
 
