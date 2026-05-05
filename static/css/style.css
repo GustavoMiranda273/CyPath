@@ -863,3 +863,381 @@ body {
     align-items: center;
 }
 .gpx-confirm-form { width: 100%; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   TODAY CARD — big prominent redesign
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.today-big-card {
+    border-left: 5px solid var(--orange);
+    padding: 20px;
+    margin-bottom: 12px;
+}
+.today-big-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+.today-big-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--orange);
+}
+.today-skip-btn {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 5px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+}
+.today-big-phase {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--muted);
+    margin-bottom: 6px;
+}
+.today-big-name {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--navy);
+    margin-bottom: 8px;
+    line-height: 1.2;
+}
+.today-big-name.today-done   { color: var(--success); }
+.today-big-name.today-missed { color: var(--danger);  text-decoration: line-through; }
+
+.today-big-detail {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.5;
+    margin-bottom: 16px;
+}
+.today-big-tss-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: var(--bg);
+    border-radius: 10px;
+    margin-bottom: 16px;
+}
+.today-big-tss { display: flex; align-items: baseline; gap: 4px; }
+.tss-number    { font-size: 32px; font-weight: 800; color: var(--navy); }
+.tss-label     { font-size: 12px; color: var(--muted); font-weight: 600; }
+.today-readiness {
+    font-size: 13px;
+    font-weight: 700;
+    padding: 6px 12px;
+    border-radius: 20px;
+}
+.today-readiness.ready { background: rgba(39,174,96,0.12);  color: var(--success); }
+.today-readiness.amber { background: rgba(243,156,18,0.12); color: #F39C12; }
+.today-readiness.tired { background: rgba(230,126,34,0.12); color: var(--orange); }
+
+.today-big-actions {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+.today-done-btn {
+    flex: 1;
+    padding: 14px;
+    background: var(--success);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.15s;
+}
+.today-done-btn:hover { opacity: 0.88; }
+.today-miss-btn {
+    flex: 1;
+    padding: 14px;
+    background: white;
+    color: var(--danger);
+    border: 2px solid var(--danger);
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.today-miss-btn:hover { background: var(--danger); color: white; }
+
+.today-status-badge {
+    text-align: center;
+    padding: 12px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    margin-bottom: 16px;
+}
+.today-status-badge.status-badge-completed { background: rgba(39,174,96,0.12);  color: var(--success); }
+.today-status-badge.status-badge-missed    { background: rgba(231,76,60,0.10);  color: var(--danger); }
+
+.today-gpx-section {
+    border-top: 1px solid var(--border);
+    padding-top: 14px;
+}
+.today-gpx-label {
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 8px;
+    text-align: center;
+}
+.today-gpx-btn {
+    display: block;
+    text-align: center;
+    padding: 12px;
+    border: 2px dashed var(--border);
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.today-gpx-btn:hover {
+    border-color: var(--orange);
+    color: var(--orange);
+    background: rgba(230,126,34,0.04);
+}
+.today-rest-content { text-align: center; padding: 10px 0; }
+.today-rest-icon    { font-size: 40px; margin-bottom: 8px; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   PLAN PAGE
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.back-btn {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--orange);
+    text-decoration: none;
+    padding: 4px 0;
+}
+.plan-summary-strip {
+    display: flex;
+    justify-content: space-around;
+    padding: 14px 16px;
+    background: var(--navy);
+}
+.plan-sum-item  { text-align: center; }
+.plan-sum-val   { font-size: 18px; font-weight: 700; color: white; }
+.plan-sum-lbl   { font-size: 10px; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.5px; }
+
+.phase-legend {
+    display: flex;
+    justify-content: center;
+    gap: 14px;
+    padding: 10px 16px;
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+}
+.phase-legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); }
+.phase-dot   { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.base-dot    { background: var(--base); }
+.build-dot   { background: var(--build); }
+.taper-dot   { background: var(--taper); }
+.done-dot    { background: var(--success); }
+.missed-dot  { background: var(--danger); }
+
+.plan-week-card {
+    background: var(--card);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    margin-bottom: 12px;
+}
+.plan-week-card.current-week {
+    box-shadow: 0 0 0 2px var(--orange), var(--shadow);
+}
+.plan-week-hdr {
+    padding: 12px 16px 8px;
+    background: #F9FAFB;
+    border-bottom: 1px solid var(--border);
+}
+.plan-week-title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+.plan-wk-num { font-size: 15px; font-weight: 700; color: var(--navy); }
+.current-week-badge {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--orange);
+    letter-spacing: 0.3px;
+}
+.plan-wk-meta { display: flex; gap: 12px; }
+.plan-wk-tss  { font-size: 12px; color: var(--muted); }
+.plan-wk-days { font-size: 12px; color: var(--muted); }
+
+.week-progress-bar {
+    height: 4px;
+    background: var(--border);
+    margin: 0 16px 4px;
+}
+.week-progress-fill { height: 100%; border-radius: 2px; transition: width 0.4s; }
+.week-progress-label {
+    font-size: 10px;
+    color: var(--muted);
+    padding: 0 16px 8px;
+}
+
+.plan-day-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 16px;
+    border-bottom: 1px solid #F5F5F5;
+    gap: 8px;
+}
+.plan-day-row:last-child { border-bottom: none; }
+.plan-day-left  { display: flex; gap: 10px; align-items: flex-start; flex: 1; min-width: 0; }
+.plan-day-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+.plan-day-num   { font-size: 11px; color: var(--muted); min-width: 28px; padding-top: 1px; }
+.plan-day-info  { flex: 1; min-width: 0; }
+.plan-day-name  { font-size: 13px; font-weight: 500; color: var(--body); }
+.plan-day-name.line-through { text-decoration: line-through; color: var(--muted); }
+.plan-day-detail { font-size: 11px; color: var(--muted); line-height: 1.35; margin-top: 2px; }
+.plan-day-tss    { font-size: 13px; font-weight: 600; color: var(--navy); }
+.plan-day-actions { display: flex; gap: 4px; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   SETTINGS PAGE
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.settings-section-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    color: var(--muted);
+    padding: 0 20px 6px;
+    margin-top: 8px;
+}
+.settings-card {
+    background: var(--card);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    margin: 0 0 16px;
+    overflow: hidden;
+}
+.settings-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 18px;
+}
+.settings-row-info-only { cursor: default; }
+.settings-row-title { font-size: 15px; font-weight: 500; color: var(--navy); }
+.settings-row-sub   { font-size: 12px; color: var(--muted); margin-top: 2px; line-height: 1.4; }
+.settings-divider   { height: 1px; background: var(--border); margin: 0 18px; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   DARK MODE
+   ══════════════════════════════════════════════════════════════════════════ */
+
+html.dark {
+    --bg:      #1A1A2E;
+    --card:    #16213E;
+    --border:  #2A2A4A;
+    --muted:   #7F8C8D;
+    --body:    #E0E0E0;
+    --navy:    #E0E0E0;
+    --shadow:  0 2px 8px rgba(0,0,0,0.4);
+}
+html.dark body                   { background: var(--bg); color: var(--body); }
+html.dark .top-bar               { background: #16213E; border-color: #2A2A4A; }
+html.dark .profile-banner        { background: #0F3460; }
+html.dark .week-hdr,
+html.dark .plan-week-hdr         { background: #1E1E3A; }
+html.dark .today-big-tss-row     { background: #1E1E3A; }
+html.dark .plan-summary-strip    { background: #0F3460; }
+html.dark .phase-legend          { background: #16213E; border-color: #2A2A4A; }
+html.dark .bottom-nav            { background: #16213E; border-color: #2A2A4A; }
+html.dark .flash-msg             { background: #2A2A1A; border-color: var(--orange); }
+html.dark .today-miss-btn        { background: #16213E; }
+html.dark .today-gpx-btn         { color: var(--muted); }
+html.dark .plan-day-row          { border-color: #2A2A4A; }
+html.dark .settings-card         { background: #16213E; }
+html.dark .modal-box             { background: #16213E; }
+html.dark .modal-cancel          { background: #1A1A2E; color: var(--body); border-color: #2A2A4A; }
+html.dark input, html.dark select { background: #1E1E3A; color: var(--body); border-color: #2A2A4A; }
+html.dark .goal-btn              { background: #1E1E3A; border-color: #2A2A4A; color: var(--body); }
+html.dark .day-btn               { background: #1E1E3A; border-color: #2A2A4A; color: var(--muted); }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   PROGRESS CARD — horizontal compact strip
+   ══════════════════════════════════════════════════════════════════════════ */
+.progress-bar-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 18px;
+    margin-bottom: 12px;
+}
+
+/* Small ring */
+.progress-ring-side {
+    position: relative;
+    width: 60px;
+    height: 60px;
+    flex-shrink: 0;
+}
+.ring-sm {
+    width: 60px;
+    height: 60px;
+}
+.ring-sm-label {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--navy);
+}
+
+/* Stats on the right */
+.progress-stats { flex: 1; min-width: 0; }
+.progress-title {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+}
+.progress-meta-row {
+    display: flex;
+    align-items: center;
+    gap: 0;
+}
+.progress-meta-item  { text-align: center; flex: 1; }
+.progress-meta-val   { font-size: 18px; font-weight: 700; color: var(--navy); }
+.progress-meta-lbl   { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; }
+.progress-meta-divider {
+    width: 1px;
+    height: 28px;
+    background: var(--border);
+    flex-shrink: 0;
+}
+
+/* Dark mode */
+html.dark .progress-bar-card { background: var(--card); }
+html.dark .ring-sm-label     { color: #E0E0E0; }
+html.dark .progress-meta-val { color: #E0E0E0; }

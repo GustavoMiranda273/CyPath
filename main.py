@@ -1,3 +1,25 @@
+"""
+CyPath API Gateway
+Flask application that exposes the CyPath algorithmic engine to the frontend.
+
+Routes:
+    GET  /                   -> Onboarding form (profile + training days)
+    POST /generate-plan      -> Build a 12-week plan and redirect to dashboard
+    GET  /dashboard          -> Main dashboard view of the current plan
+    POST /complete-session   -> Mark a day's workout as completed
+    POST /miss-session       -> Mark a day as missed; triggers re-optimisation
+    POST /restore-session    -> Undo a missed/completed flag (revert to planned)
+    GET  /api/plan           -> Return the current plan as JSON
+
+State management:
+    For this university prototype, plans are stored in a simple in-memory
+    dictionary keyed by Flask session ID. This is appropriate for the single-
+    user evaluation scope defined in the ethics approval (ID 70224).
+    Production deployments would substitute a proper database; this is noted
+    as future work in Section 7.
+
+Author: Gustavo Miranda
+"""
 
 import uuid
 from typing import Optional
@@ -346,6 +368,66 @@ def dismiss_gpx():
     """Dismiss the GPX confirmation card without logging."""
     session.pop("pending_gpx", None)
     return redirect(url_for("dashboard"))
+
+
+# ─── Plan page ───────────────────────────────────────────────────────────────
+
+@app.route("/plan", methods=["GET"])
+def plan_page():
+    """Dedicated full training plan page — linked from the Train nav button."""
+    plan = _current_plan()
+    if plan is None:
+        return redirect(url_for("index"))
+
+    today_day    = session.get("today_day", 1)
+    current_week = (today_day - 1) // 7 + 1
+
+    weeks = []
+    for week_number in range(1, plan.total_weeks + 1):
+        workouts = [w for w in plan.workouts if w.week == week_number]
+        training_days = sum(1 for w in workouts if w.phase != "Rest")
+        done = sum(1 for w in workouts
+                   if w.phase != "Rest" and getattr(w, "status", "planned") == STATUS_COMPLETED)
+        pct = round((done / training_days * 100)) if training_days else 0
+        weeks.append({
+            "number":       week_number,
+            "phase":        next((w.phase for w in workouts if w.phase != "Rest"), "Rest"),
+            "total_tss":    round(plan.weekly_tss(week_number), 1),
+            "workouts":     workouts,
+            "training_days":training_days,
+            "pct_done":     pct,
+        })
+
+    return render_template(
+        "plan.html",
+        plan=plan,
+        weeks=weeks,
+        today_day=today_day,
+        current_week=current_week,
+        STATUS_COMPLETED=STATUS_COMPLETED,
+        STATUS_MISSED=STATUS_MISSED,
+        STATUS_PLANNED=STATUS_PLANNED,
+    )
+
+
+# ─── Settings page ────────────────────────────────────────────────────────────
+
+@app.route("/settings", methods=["GET"])
+def settings_page():
+    """Settings page — dark mode toggle and restart option."""
+    plan = _current_plan()
+    if plan is None:
+        return redirect(url_for("index"))
+
+    today_day = session.get("today_day", 1)
+    pct_done  = round((today_day / plan.total_days()) * 100)
+
+    return render_template(
+        "settings.html",
+        plan=plan,
+        today_day=today_day,
+        pct_done=pct_done,
+    )
 
 
 # ─── JSON API (used by future frontend / for testing) ────────────────────────

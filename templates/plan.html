@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CyPath — Training Plan</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<div class="phone-shell">
+
+    <!-- ── Top bar ──────────────────────────────────────────────────────── -->
+    <div class="top-bar">
+        <a href="{{ url_for('dashboard') }}" class="back-btn">← Back</a>
+        <span class="app-title" style="font-size:18px;">Training Plan</span>
+        <span style="width:60px;"></span>
+    </div>
+
+    <!-- ── Plan summary strip ───────────────────────────────────────────── -->
+    <div class="plan-summary-strip">
+        <div class="plan-sum-item">
+            <div class="plan-sum-val">{{ plan.goal_km | int }} km</div>
+            <div class="plan-sum-lbl">Goal</div>
+        </div>
+        <div class="plan-sum-item">
+            <div class="plan-sum-val">{{ plan.total_weeks }}w</div>
+            <div class="plan-sum-lbl">Duration</div>
+        </div>
+        <div class="plan-sum-item">
+            <div class="plan-sum-val">Day {{ today_day }}</div>
+            <div class="plan-sum-lbl">Today</div>
+        </div>
+        <div class="plan-sum-item">
+            <div class="plan-sum-val">{{ plan.profile | capitalize }}</div>
+            <div class="plan-sum-lbl">Level</div>
+        </div>
+    </div>
+
+    <!-- ── Phase legend ─────────────────────────────────────────────────── -->
+    <div class="phase-legend">
+        <span class="phase-legend-item"><span class="phase-dot base-dot"></span>Base</span>
+        <span class="phase-legend-item"><span class="phase-dot build-dot"></span>Build</span>
+        <span class="phase-legend-item"><span class="phase-dot taper-dot"></span>Taper</span>
+        <span class="phase-legend-item"><span class="phase-dot done-dot"></span>Done</span>
+        <span class="phase-legend-item"><span class="phase-dot missed-dot"></span>Missed</span>
+    </div>
+
+    <!-- ── Flash messages ───────────────────────────────────────────────── -->
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+        <div style="padding:8px 16px 0;">
+            {% for msg in messages %}
+            <div class="flash-msg">{{ msg }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    {% endwith %}
+
+    <!-- ── Week cards ───────────────────────────────────────────────────── -->
+    <div class="scroll-content" style="padding-bottom:40px;">
+        {% for week in weeks %}
+        <div class="plan-week-card phase-{{ week.phase | lower }} {% if week.number == current_week %}current-week{% endif %}">
+
+            <div class="plan-week-hdr">
+                <div class="plan-week-title-row">
+                    <span class="plan-wk-num">Week {{ week.number }}</span>
+                    <span class="phase-chip">{{ week.phase }}</span>
+                    {% if week.number == current_week %}
+                    <span class="current-week-badge">◀ Now</span>
+                    {% endif %}
+                </div>
+                <div class="plan-wk-meta">
+                    <span class="plan-wk-tss">{{ week.total_tss }} TSS</span>
+                    <span class="plan-wk-days">{{ week.training_days }} sessions</span>
+                </div>
+            </div>
+
+            <!-- Week progress bar -->
+            <div class="week-progress-bar">
+                <div class="week-progress-fill"
+                     style="width: {{ week.pct_done }}%;
+                            background: {% if week.pct_done == 100 %}var(--success)
+                                        {% elif week.number < current_week %}var(--danger)
+                                        {% else %}var(--orange){% endif %};">
+                </div>
+            </div>
+            <div class="week-progress-label">{{ week.pct_done }}% complete</div>
+
+            <!-- Day rows -->
+            {% for w in week.workouts %}
+            {% set status = w.status if w.status is defined else STATUS_PLANNED %}
+            <div class="plan-day-row status-{{ status }} {% if w.day == today_day %}today-row{% endif %}">
+
+                <div class="plan-day-left">
+                    <div class="plan-day-num">
+                        D{{ w.day }}
+                        {% if w.day == today_day %}<span class="today-dot">●</span>{% endif %}
+                    </div>
+                    {% if w.phase != 'Rest' %}
+                    <div class="plan-day-info">
+                        <div class="plan-day-name {% if status == STATUS_MISSED %}line-through{% endif %}">
+                            {{ w.description }}
+                        </div>
+                        {% if w.detail %}
+                        <div class="plan-day-detail">{{ w.detail }}</div>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <div class="plan-day-info">
+                        <div class="plan-day-name muted-txt">Rest</div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="plan-day-right">
+                    {% if w.phase != 'Rest' %}
+                    <div class="plan-day-tss">{{ w.target_tss }}<span style="font-size:9px;color:var(--muted)"> TSS</span></div>
+                    <div class="plan-day-actions">
+                        {% if status == STATUS_PLANNED %}
+                            <form action="{{ url_for('complete_session') }}" method="POST" class="ifrm">
+                                <input type="hidden" name="day" value="{{ w.day }}">
+                                <button class="btn-done" title="Mark done">✓</button>
+                            </form>
+                            <form action="{{ url_for('miss_session') }}" method="POST" class="ifrm">
+                                <input type="hidden" name="day" value="{{ w.day }}">
+                                <button class="btn-miss" title="Mark missed">✕</button>
+                            </form>
+                        {% else %}
+                            <span class="status-chip status-chip-{{ status }}">{{ status }}</span>
+                            <form action="{{ url_for('restore_session') }}" method="POST" class="ifrm">
+                                <input type="hidden" name="day" value="{{ w.day }}">
+                                <button class="btn-undo" title="Undo">↩</button>
+                            </form>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+
+            </div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- ── Bottom nav ───────────────────────────────────────────────────── -->
+    <nav class="bottom-nav">
+        <a class="nav-item" href="{{ url_for('dashboard') }}">
+            <span class="nav-icon">⊙</span><span>Dashboard</span>
+        </a>
+        <a class="nav-item active" href="{{ url_for('plan_page') }}">
+            <span class="nav-icon">🗺</span><span>Train</span>
+        </a>
+        <a class="nav-item" href="#">
+            <span class="nav-icon">📈</span><span>Stats</span>
+        </a>
+        <a class="nav-item" href="{{ url_for('settings_page') }}">
+            <span class="nav-icon">⚙</span><span>Settings</span>
+        </a>
+    </nav>
+
+</div>
+</body>
+</html>

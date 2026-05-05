@@ -104,92 +104,112 @@
 
         <div class="section-label">HOME</div>
 
-        <!-- ── Row 1: Path card + Today's roadmap ──────────────────────── -->
-        <div class="card-row">
-
-            <!-- Path to 100km -->
-            <div class="card path-card">
-                <div class="card-title">MY PATH TO {{ plan.goal_km | int }} KM</div>
-
-                <!-- Circular progress ring -->
-                {% set pct = ((today_day / plan.total_days()) * 100) | round(0) | int %}
-                {% set circumference = 188 %}
-                {% set dash = (pct / 100 * circumference) | round(1) %}
-                <div class="ring-wrap">
-                    <svg class="ring" viewBox="0 0 70 70">
-                        <circle class="ring-bg"   cx="35" cy="35" r="30" />
-                        <circle class="ring-fill" cx="35" cy="35" r="30"
-                            stroke-dasharray="{{ dash }} {{ circumference }}"
-                            transform="rotate(-90 35 35)" />
-                    </svg>
-                    <div class="ring-label">
-                        <span class="ring-pct">{{ pct }}%</span>
+        <!-- ── Row 1: Path card ─────────────────────────────────────────── -->
+        <!-- ── Progress bar (horizontal, compact) ──────────────────────── -->
+        {% set pct = ((today_day / plan.total_days()) * 100) | round(0) | int %}
+        {% set circumference = 188 %}
+        {% set dash = (pct / 100 * circumference) | round(1) %}
+        <div class="card progress-bar-card">
+            <div class="progress-ring-side">
+                <svg class="ring-sm" viewBox="0 0 70 70">
+                    <circle class="ring-bg"   cx="35" cy="35" r="30" />
+                    <circle class="ring-fill" cx="35" cy="35" r="30"
+                        stroke-dasharray="{{ dash }} {{ circumference }}"
+                        transform="rotate(-90 35 35)" />
+                </svg>
+                <div class="ring-sm-label">{{ pct }}%</div>
+            </div>
+            <div class="progress-stats">
+                <div class="progress-title">MY PATH TO {{ plan.goal_km | int }} KM</div>
+                <div class="progress-meta-row">
+                    <div class="progress-meta-item">
+                        <div class="progress-meta-val">{{ plan.total_days() - today_day }}</div>
+                        <div class="progress-meta-lbl">days left</div>
+                    </div>
+                    <div class="progress-meta-divider"></div>
+                    <div class="progress-meta-item">
+                        <div class="progress-meta-val">W{{ ((today_day - 1) // 7 + 1) }}/{{ plan.total_weeks }}</div>
+                        <div class="progress-meta-lbl">week</div>
+                    </div>
+                    <div class="progress-meta-divider"></div>
+                    <div class="progress-meta-item">
+                        {% if today_snap %}
+                        <div class="progress-meta-val" style="color:var(--base);">{{ today_snap.ctl }}</div>
+                        <div class="progress-meta-lbl">fitness</div>
+                        {% endif %}
                     </div>
                 </div>
-
-                <div class="path-detail">Complete | {{ plan.total_days() - today_day }} days to go</div>
-                <div class="path-detail">Week {{ ((today_day - 1) // 7 + 1) }} of {{ plan.total_weeks }}</div>
-                <div class="path-detail">
-                    {% if today_snap %}
-                        CTL: <strong>{{ today_snap.ctl }}</strong>
-                    {% endif %}
-                </div>
             </div>
+        </div>
 
-            <!-- Today's roadmap -->
-            <div class="card roadmap-card">
-                <div class="card-title">TODAY'S ROADMAP</div>
-                <div class="roadmap-day">Day {{ today_day }}</div>
+        <!-- ── Today's workout card (full width, prominent) ─────────── -->
+        <div class="card today-big-card">
+                <div class="today-big-header">
+                    <div class="today-big-label">TODAY — DAY {{ today_day }}</div>
+                    <form action="{{ url_for('advance_day') }}" method="POST">
+                        <button type="submit" class="today-skip-btn">Skip →</button>
+                    </form>
+                </div>
 
                 {% if today_workout and today_workout.phase != 'Rest' %}
                     {% set status = today_workout.status if today_workout.status is defined else STATUS_PLANNED %}
-                    <div class="roadmap-steps">
-                        <div class="step {% if status == STATUS_COMPLETED %}step-done{% elif status == STATUS_MISSED %}step-missed{% endif %}">
-                            <div class="step-num">1</div>
-                            <div class="step-info">
-                                <div class="step-name">{{ today_workout.description | upper }}</div>
-                                <div class="step-tss">{{ today_workout.target_tss }} TSS · {{ today_workout.phase }}</div>
-                                {% if today_workout.detail %}
-                                <div class="step-detail">{{ today_workout.detail }}</div>
-                                {% endif %}
-                                {% if status == STATUS_PLANNED %}
-                                    <form action="{{ url_for('complete_session') }}" method="POST">
-                                        <input type="hidden" name="day" value="{{ today_day }}">
-                                        <button type="submit" class="step-btn">MARK COMPLETE</button>
-                                    </form>
-                                    <form action="{{ url_for('miss_session') }}" method="POST" style="margin-top:4px">
-                                        <input type="hidden" name="day" value="{{ today_day }}">
-                                        <button type="submit" class="step-btn-ghost">I MISSED THIS</button>
-                                    </form>
-                                {% else %}
-                                    <span class="step-status-label">{{ status | upper }}</span>
-                                {% endif %}
-                            </div>
-                        </div>
+
+                    <div class="today-big-phase">{{ today_workout.phase }} Phase</div>
+                    <div class="today-big-name {% if status == STATUS_COMPLETED %}today-done{% elif status == STATUS_MISSED %}today-missed{% endif %}">
+                        {{ today_workout.description }}
                     </div>
+                    {% if today_workout.detail %}
+                    <div class="today-big-detail">{{ today_workout.detail }}</div>
+                    {% endif %}
+
+                    <div class="today-big-tss-row">
+                        <div class="today-big-tss">
+                            <span class="tss-number">{{ today_workout.target_tss }}</span>
+                            <span class="tss-label">TSS</span>
+                        </div>
+                        {% if today_snap %}
+                        <div class="today-readiness {% if today_snap.tsb >= 10 %}ready{% elif today_snap.tsb >= 0 %}amber{% else %}tired{% endif %}">
+                            {% if today_snap.tsb >= 10 %}✅ Ready to train
+                            {% elif today_snap.tsb >= 0 %}🟡 Feeling good
+                            {% elif today_snap.tsb >= -10 %}😓 Slightly tired
+                            {% else %}🔴 Heavy load{% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    {% if status == STATUS_PLANNED %}
+                    <div class="today-big-actions">
+                        <form action="{{ url_for('complete_session') }}" method="POST" style="flex:1">
+                            <input type="hidden" name="day" value="{{ today_day }}">
+                            <button type="submit" class="today-done-btn">✓ Mark Complete</button>
+                        </form>
+                        <form action="{{ url_for('miss_session') }}" method="POST" style="flex:1">
+                            <input type="hidden" name="day" value="{{ today_day }}">
+                            <button type="submit" class="today-miss-btn">✕ I Missed This</button>
+                        </form>
+                    </div>
+                    {% else %}
+                    <div class="today-status-badge status-badge-{{ status }}">{{ status | upper }}</div>
+                    {% endif %}
+
+                    <div class="today-gpx-section">
+                        <div class="today-gpx-label">Have a Strava file? Import it for accurate data</div>
+                        <form action="{{ url_for('upload_gpx') }}" method="POST" enctype="multipart/form-data">
+                            <label class="today-gpx-btn">
+                                📂 Upload GPX from Strava
+                                <input type="file" name="gpx_file" accept=".gpx"
+                                       onchange="this.form.submit()" style="display:none;">
+                            </label>
+                        </form>
+                    </div>
+
                 {% else %}
-                    <div class="rest-badge">😴 REST DAY</div>
-                    <div class="step-tss" style="margin-top:8px; text-align:center;">Recovery is part of the plan.</div>
+                    <div class="today-rest-content">
+                        <div class="today-rest-icon">😴</div>
+                        <div class="today-big-name">Rest Day</div>
+                        <div class="today-big-detail">No training today — recovery is essential for adaptation. Use the time to hydrate, sleep well, and prepare for tomorrow.</div>
+                    </div>
                 {% endif %}
-
-                <form action="{{ url_for('advance_day') }}" method="POST" style="margin-top:10px;">
-                    <button type="submit" class="next-day-btn">Next Day →</button>
-                </form>
-
-                <!-- GPX upload -->
-                <div class="gpx-upload-wrap">
-                    <div class="gpx-divider">or import from Strava</div>
-                    <form action="{{ url_for('upload_gpx') }}" method="POST"
-                          enctype="multipart/form-data" class="gpx-upload-form">
-                        <label class="gpx-file-label">
-                            📂 Upload GPX file
-                            <input type="file" name="gpx_file" accept=".gpx"
-                                   onchange="this.form.submit()" style="display:none;">
-                        </label>
-                    </form>
-                </div>
-            </div>
-
         </div>
 
         <!-- ── Fitness curve ────────────────────────────────────────────── -->
@@ -358,16 +378,13 @@
 
     </div><!-- end scroll-content -->
 
-    <!-- ── Floating action button ───────────────────────────────────────── -->
-    <button class="fab" onclick="document.getElementById('plan-section').scrollIntoView({behavior:'smooth'})">+</button>
-
     <!-- ── Bottom navigation ────────────────────────────────────────────── -->
     <nav class="bottom-nav">
         <a class="nav-item active" href="#">
             <span class="nav-icon">⊙</span>
             <span>Dashboard</span>
         </a>
-        <a class="nav-item" href="#plan-section">
+        <a class="nav-item" href="{{ url_for('plan_page') }}">
             <span class="nav-icon">🗺</span>
             <span>Train</span>
         </a>
@@ -375,7 +392,7 @@
             <span class="nav-icon">📈</span>
             <span>Stats</span>
         </a>
-        <a class="nav-item" href="{{ url_for('reset') }}" onclick="return confirm('Start over?')">
+        <a class="nav-item" href="{{ url_for('settings_page') }}">
             <span class="nav-icon">⚙</span>
             <span>Settings</span>
         </a>
@@ -499,5 +516,12 @@
 })();
 </script>
 
+
+<script>
+// Restore dark mode preference on every page load
+if (localStorage.getItem('cypath-dark') === 'true') {
+    document.documentElement.classList.add('dark');
+}
+</script>
 </body>
 </html>
