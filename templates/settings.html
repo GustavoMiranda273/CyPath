@@ -92,8 +92,8 @@
         <a class="nav-item" href="{{ url_for('plan_page') }}">
             <span class="nav-icon">🗺</span><span>Train</span>
         </a>
-        <a class="nav-item" href="#">
-            <span class="nav-icon">📈</span><span>Stats</span>
+        <a class="nav-item" href="{{ url_for('form_page') }}">
+            <span class="nav-icon">📈</span><span>Form</span>
         </a>
         <a class="nav-item active" href="#">
             <span class="nav-icon">⚙</span><span>Settings</span>
@@ -136,9 +136,4 @@ toggle.addEventListener('change', function () {
         localStorage.setItem('cypath-dark', 'true');
     } else {
         root.classList.remove('dark');
-        localStorage.setItem('cypath-dark', 'false');
-    }
-});
-</script>
-</body>
-</html>
+        localStorage.setItem('cypath-dark

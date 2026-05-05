@@ -102,8 +102,8 @@ def create_plan():
 @app.route("/dashboard", methods=["GET"])
 def dashboard():
     """
-    Main dashboard view. Shows the fitness curve and the week-by-week plan,
-    allowing the user to mark sessions as completed or missed.
+    Main dashboard view. Shows today's workout, the readiness curve, and
+    progress towards the goal. The full training plan lives on its own page.
     """
     plan = _current_plan()
     if plan is None:
@@ -111,30 +111,11 @@ def dashboard():
 
     today_day = session.get("today_day", 1)
 
-    # ── Compute the Banister fitness curve ───────────────────────────────────
+    # ── Compute the Banister fitness curve (used for chart + today's snapshot)
     curve = compute_curve(plan, today_day=today_day)
 
-    # Prepare data for Chart.js — three series across 84 days.
-    chart_labels  = [f"W{s.week}D{s.day}" for s in curve]
-    chart_ctl     = [s.ctl for s in curve]
-    chart_atl     = [s.atl for s in curve]
-    chart_tsb     = [s.tsb for s in curve]
-    # Index where projected data begins (used to draw a vertical marker).
-    split_index   = today_day - 1
-
-    # ── Group workouts by week for the plan table ────────────────────────────
-    weeks = []
-    for week_number in range(1, plan.total_weeks + 1):
-        weeks.append({
-            "number":    week_number,
-            "phase":     next(
-                (w.phase for w in plan.workouts
-                 if w.week == week_number and w.phase != "Rest"),
-                "Rest",
-            ),
-            "total_tss": round(plan.weekly_tss(week_number), 1),
-            "workouts":  [w for w in plan.workouts if w.week == week_number],
-        })
+    chart_tsb   = [s.tsb for s in curve]
+    split_index = today_day - 1  # vertical "today" marker on the chart
 
     # Current day summary for the header card.
     today_workout = next((w for w in plan.workouts if w.day == today_day), None)
@@ -144,13 +125,9 @@ def dashboard():
     return render_template(
         "dashboard.html",
         plan=plan,
-        weeks=weeks,
         today_day=today_day,
         today_workout=today_workout,
         today_snap=today_snap,
-        chart_labels=chart_labels,
-        chart_ctl=chart_ctl,
-        chart_atl=chart_atl,
         chart_tsb=chart_tsb,
         split_index=split_index,
         STATUS_COMPLETED=STATUS_COMPLETED,
@@ -398,6 +375,39 @@ def settings_page():
         plan=plan,
         today_day=today_day,
         pct_done=pct_done,
+    )
+
+
+# ─── Form page ───────────────────────────────────────────────────────────────
+
+@app.route("/form", methods=["GET"])
+def form_page():
+    """
+    Form & Fitness page — visualises the Banister CTL/ATL/TSB curves over the
+    full plan, with today's snapshot and a TSB-based readiness interpretation.
+    """
+    plan = _current_plan()
+    if plan is None:
+        return redirect(url_for("index"))
+
+    today_day = session.get("today_day", 1)
+    curve     = compute_curve(plan, today_day=today_day)
+
+    chart_ctl   = [s.ctl for s in curve]
+    chart_atl   = [s.atl for s in curve]
+    chart_tsb   = [s.tsb for s in curve]
+    split_index = today_day - 1
+    today_snap  = curve[today_day - 1] if curve else None
+
+    return render_template(
+        "form.html",
+        plan=plan,
+        today_day=today_day,
+        today_snap=today_snap,
+        chart_ctl=chart_ctl,
+        chart_atl=chart_atl,
+        chart_tsb=chart_tsb,
+        split_index=split_index,
     )
 
 

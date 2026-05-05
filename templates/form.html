@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CyPath — Form & Fitness</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body>
+<div class="phone-shell">
+
+    <!-- ── Top bar ──────────────────────────────────────────────────────── -->
+    <div class="top-bar">
+        <a href="{{ url_for('dashboard') }}" class="back-btn">← Back</a>
+        <span class="app-title" style="font-size:18px;">Form & Fitness</span>
+        <span style="width:60px;"></span>
+    </div>
+
+    <div class="scroll-content" style="padding-top:16px;">
+
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for msg in messages %}
+                    <div class="flash-msg">{{ msg }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- ── Today's snapshot ─────────────────────────────────────────── -->
+        <div class="section-label">TODAY'S SNAPSHOT</div>
+        <div class="card form-snapshot-card">
+            <div class="form-snapshot-day">DAY {{ today_day }} OF {{ plan.total_days() }}</div>
+
+            {% if today_snap %}
+            <div class="form-num-grid">
+                <div class="form-num-card form-num-ctl">
+                    <div class="form-num-val">{{ today_snap.ctl }}</div>
+                    <div class="form-num-lbl">FITNESS</div>
+                    <div class="form-num-sub">CTL</div>
+                </div>
+                <div class="form-num-card form-num-atl">
+                    <div class="form-num-val">{{ today_snap.atl }}</div>
+                    <div class="form-num-lbl">FATIGUE</div>
+                    <div class="form-num-sub">ATL</div>
+                </div>
+                <div class="form-num-card form-num-tsb">
+                    <div class="form-num-val">{{ today_snap.tsb }}</div>
+                    <div class="form-num-lbl">FORM</div>
+                    <div class="form-num-sub">TSB</div>
+                </div>
+            </div>
+
+            <!-- Readiness banner -->
+            <div class="form-readiness-banner
+                {% if today_snap.tsb >= 10 %}readiness-ready
+                {% elif today_snap.tsb >= 0 %}readiness-amber
+                {% elif today_snap.tsb >= -10 %}readiness-tired
+                {% else %}readiness-overload{% endif %}">
+                <div class="readiness-icon">
+                    {% if today_snap.tsb >= 10 %}✅
+                    {% elif today_snap.tsb >= 0 %}🟡
+                    {% elif today_snap.tsb >= -10 %}😓
+                    {% else %}🔴{% endif %}
+                </div>
+                <div class="readiness-text">
+                    <div class="readiness-title">
+                        {% if today_snap.tsb >= 10 %}Fresh — ready for hard sessions
+                        {% elif today_snap.tsb >= 0 %}Optimal — feeling good
+                        {% elif today_snap.tsb >= -10 %}Loaded — easy or moderate today
+                        {% else %}Overloaded — consider rest{% endif %}
+                    </div>
+                    <div class="readiness-sub">Based on your training stress balance (TSB = {{ today_snap.tsb }})</div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- ── Chart card ───────────────────────────────────────────────── -->
+        <div class="card full-card">
+            <div class="card-title">FITNESS CURVE — {{ plan.total_weeks }}-WEEK JOURNEY</div>
+            <div class="chart-wrap" style="height: 220px;">
+                <canvas id="formChart"></canvas>
+            </div>
+            <div class="chart-legend">
+                <span class="rbar-dot" style="background:#3498DB;"></span> Fitness (CTL) &nbsp;
+                <span class="rbar-dot" style="background:#E74C3C;"></span> Fatigue (ATL) &nbsp;
+                <span class="rbar-dot" style="background:#27AE60;"></span> Form (TSB)
+            </div>
+        </div>
+
+        <!-- ── Explainer ────────────────────────────────────────────────── -->
+        <div class="card full-card">
+            <div class="card-title">WHAT DO THESE MEAN?</div>
+            <div class="form-explainer-row">
+                <div class="form-explainer-icon" style="color:#3498DB;">●</div>
+                <div class="form-explainer-text">
+                    <div class="form-explainer-title">Fitness (CTL)</div>
+                    <div class="form-explainer-body">Your long-term training load — a 42-day exponentially weighted average. Builds slowly and represents your aerobic capacity.</div>
+                </div>
+            </div>
+            <div class="form-explainer-row">
+                <div class="form-explainer-icon" style="color:#E74C3C;">●</div>
+                <div class="form-explainer-text">
+                    <div class="form-explainer-title">Fatigue (ATL)</div>
+                    <div class="form-explainer-body">Your short-term load — a 7-day average. This responds quickly to recent hard sessions and recovery.</div>
+                </div>
+            </div>
+            <div class="form-explainer-row">
+                <div class="form-explainer-icon" style="color:#27AE60;">●</div>
+                <div class="form-explainer-text">
+                    <div class="form-explainer-title">Form (TSB)</div>
+                    <div class="form-explainer-body">Fitness minus fatigue. Positive numbers mean you're fresh; negative numbers mean you're carrying load. Race-day target is typically +5 to +15.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="disclaimer">
+            ⚠️ Banister-model values are estimates derived from your planned and logged training stress, not a substitute for professional coaching or medical advice.
+        </div>
+
+        <div style="height: 80px;"></div>
+    </div>
+
+    <!-- ── Bottom nav ───────────────────────────────────────────────────── -->
+    <nav class="bottom-nav">
+        <a class="nav-item" href="{{ url_for('dashboard') }}">
+            <span class="nav-icon">⊙</span><span>Dashboard</span>
+        </a>
+        <a class="nav-item" href="{{ url_for('plan_page') }}">
+            <span class="nav-icon">🗺</span><span>Train</span>
+        </a>
+        <a class="nav-item active" href="{{ url_for('form_page') }}">
+            <span class="nav-icon">📈</span><span>Form</span>
+        </a>
+        <a class="nav-item" href="{{ url_for('settings_page') }}">
+            <span class="nav-icon">⚙</span><span>Settings</span>
+        </a>
+    </nav>
+
+</div>
+
+<!-- ── Chart.js ─────────────────────────────────────────────────────────── -->
+<script>
+(function () {
+    const ctlData  = {{ chart_ctl | tojson }};
+    const atlData  = {{ chart_atl | tojson }};
+    const tsbData  = {{ chart_tsb | tojson }};
+    const splitIdx = {{ split_index }};
+
+    const todayLine = {
+        id: "todayLine",
+        afterDraw(chart) {
+            if (splitIdx <= 0) return;
+            const ctx = chart.ctx;
+            const x = chart.scales.x.getPixelForValue(splitIdx);
+            const { top, bottom } = chart.scales.y;
+            ctx.save();
+            ctx.beginPath();
+            ctx.setLineDash([4, 4]);
+            ctx.strokeStyle = "rgba(0,0,0,0.3)";
+            ctx.lineWidth = 1.5;
+            ctx.moveTo(x, top);
+            ctx.lineTo(x, bottom);
+            ctx.stroke();
+            ctx.font = "10px Arial";
+            ctx.fillStyle = "rgba(0,0,0,0.4)";
+            ctx.fillText("Today", x + 4, top + 12);
+            ctx.restore();
+        }
+    };
+
+    new Chart(document.getElementById("formChart").getContext("2d"), {
+        type: "line",
+        plugins: [todayLine],
+        data: {
+            labels: ctlData.map((_, i) => i + 1),
+            datasets: [
+                {
+                    label: "Fitness (CTL)",
+                    data: ctlData,
+                    borderColor: "#3498DB",
+                    backgroundColor: "rgba(52,152,219,0.10)",
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    tension: 0.3,
+                    fill: true,
+                },
+                {
+                    label: "Fatigue (ATL)",
+                    data: atlData,
+                    borderColor: "#E74C3C",
+                    backgroundColor: "transparent",
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    tension: 0.3,
+                },
+                {
+                    label: "Form (TSB)",
+                    data: tsbData,
+                    borderColor: "#27AE60",
+                    backgroundColor: "transparent",
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    tension: 0.3,
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: "index", intersect: false },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        title: (i) => `Day ${i[0].dataIndex + 1}`,
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: {
+                        maxTicksLimit: 14,
+                        callback: (v, i) => i % 7 === 0 ? `W${Math.floor(i/7)+1}` : "",
+                        font: { size: 10 }
+                    },
+                    grid: { display: false }
+                },
+                y: {
+                    ticks: { font: { size: 10 } },
+                    grid: { color: "rgba(0,0,0,0.04)" }
+                }
+            }
+        }
+    });
+})();
+</script>
+
+<script>
+if (localStorage.getItem('cypath-dark') === 'true') {
+    document.documentElement.classList.add('dark');
+}
+</script>
+</body>
+</html>

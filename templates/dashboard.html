@@ -104,7 +104,6 @@
 
         <div class="section-label">HOME</div>
 
-        <!-- ── Row 1: Path card ─────────────────────────────────────────── -->
         <!-- ── Progress bar (horizontal, compact) ──────────────────────── -->
         {% set pct = ((today_day / plan.total_days()) * 100) | round(0) | int %}
         {% set circumference = 188 %}
@@ -297,78 +296,6 @@
             <div class="milestone-sub">{{ weeks_left }} week{{ 's' if weeks_left != 1 else '' }} remaining</div>
         </div>
 
-        <!-- ── Action buttons ───────────────────────────────────────────── -->
-        <div class="card-row">
-            <a href="#plan-section" class="action-card">
-                <div class="action-icon">📅</div>
-                <div class="action-label">FULL TRAINING PLAN</div>
-            </a>
-            <a href="#plan-section" class="action-card">
-                <div class="action-icon">📊</div>
-                <div class="action-label">WEEK SUMMARY</div>
-            </a>
-        </div>
-
-        <!-- ── Full training plan ───────────────────────────────────────── -->
-        <div id="plan-section">
-            <div class="section-label" style="margin-top:16px;">TRAINING PLAN</div>
-
-            {% for week in weeks %}
-            <div class="week-block phase-{{ week.phase | lower }}">
-                <div class="week-hdr">
-                    <div class="week-title-row">
-                        <span class="wk-num">Week {{ week.number }}</span>
-                        <span class="phase-chip">{{ week.phase }}</span>
-                    </div>
-                    <span class="wk-tss">{{ week.total_tss }} TSS</span>
-                </div>
-
-                {% for w in week.workouts %}
-                {% set status = w.status if w.status is defined else STATUS_PLANNED %}
-                <div class="day-row status-{{ status }}{% if w.day == today_day %} today-row{% endif %}">
-                    <div class="day-num">
-                        D{{ w.day }}
-                        {% if w.day == today_day %}<span class="today-dot">●</span>{% endif %}
-                    </div>
-                    <div class="day-desc">
-                        {% if w.phase == 'Rest' %}
-                            <span class="muted-txt">Rest</span>
-                        {% else %}
-                            <span class="day-desc-title">{{ w.description }}</span>
-                            {% if w.detail %}
-                            <span class="day-desc-sub">{{ w.detail }}</span>
-                            {% endif %}
-                        {% endif %}
-                    </div>
-                    <div class="day-tss">
-                        {% if w.phase != 'Rest' %}{{ w.target_tss }}{% endif %}
-                    </div>
-                    <div class="day-actions">
-                        {% if w.phase != 'Rest' %}
-                            {% if status == STATUS_PLANNED %}
-                                <form action="{{ url_for('complete_session') }}" method="POST" class="ifrm">
-                                    <input type="hidden" name="day" value="{{ w.day }}">
-                                    <button class="btn-done">✓</button>
-                                </form>
-                                <form action="{{ url_for('miss_session') }}" method="POST" class="ifrm">
-                                    <input type="hidden" name="day" value="{{ w.day }}">
-                                    <button class="btn-miss">✕</button>
-                                </form>
-                            {% else %}
-                                <span class="status-chip status-chip-{{ status }}">{{ status }}</span>
-                                <form action="{{ url_for('restore_session') }}" method="POST" class="ifrm">
-                                    <input type="hidden" name="day" value="{{ w.day }}">
-                                    <button class="btn-undo">↩</button>
-                                </form>
-                            {% endif %}
-                        {% endif %}
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-            {% endfor %}
-        </div>
-
         <div class="disclaimer">
             ⚠️ CyPath is a university research prototype, not professional coaching or medical advice. Consult a physician before starting any training programme.
         </div>
@@ -388,9 +315,9 @@
             <span class="nav-icon">🗺</span>
             <span>Train</span>
         </a>
-        <a class="nav-item" href="#">
+        <a class="nav-item" href="{{ url_for('form_page') }}">
             <span class="nav-icon">📈</span>
-            <span>Stats</span>
+            <span>Form</span>
         </a>
         <a class="nav-item" href="{{ url_for('settings_page') }}">
             <span class="nav-icon">⚙</span>
@@ -420,11 +347,6 @@
     const tsbData  = {{ chart_tsb | tojson }};
     const splitIdx = {{ split_index }};
 
-    // Colour each bar based on TSB value:
-    //  green  (≥ 10): ready to train
-    //  amber  (0–10): feeling good
-    //  orange (-10–0): slightly tired
-    //  red    (< -10): overloaded
     function tsbColour(tsb) {
         if (tsb >= 10)  return "rgba(39,174,96,0.85)";   // green
         if (tsb >= 0)   return "rgba(243,156,18,0.85)";  // amber
@@ -432,8 +354,6 @@
         return "rgba(231,76,60,0.85)";                   // red
     }
 
-    // Normalise TSB values to bar heights — show absolute value, colour shows sign.
-    // We draw two layers: above zero in cool colours, below zero in warm colours.
     const barColours = tsbData.map(tsbColour);
 
     const vLinePlugin = {
@@ -451,7 +371,6 @@
             ctx.moveTo(x, top);
             ctx.lineTo(x, bottom);
             ctx.stroke();
-            // Label "Today"
             ctx.font = "10px Arial";
             ctx.fillStyle = "rgba(0,0,0,0.35)";
             ctx.fillText("Today", x + 4, top + 12);
