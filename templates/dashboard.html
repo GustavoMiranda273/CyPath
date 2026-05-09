@@ -100,9 +100,9 @@
                 </div>
                 <div class="gpx-actions">
                     <button type="submit" class="primary-btn" style="flex:1;">✓ Log this session</button>
-                    <form action="{{ url_for('dismiss_gpx') }}" method="POST" style="flex:0 0 auto;">
-                        <button type="submit" class="ghost-btn">Dismiss</button>
-                    </form>
+                    <button type="submit" class="ghost-btn"
+                            formaction="{{ url_for('dismiss_gpx') }}"
+                            formnovalidate>Dismiss</button>
                 </div>
             </form>
         </div>
@@ -198,14 +198,67 @@
                     {% endif %}
 
                     <div class="today-gpx-section">
-                        <div class="today-gpx-label">Have a Strava file? Import it for accurate data</div>
-                        <form action="{{ url_for('upload_gpx') }}" method="POST" enctype="multipart/form-data">
-                            <label class="today-gpx-btn">
-                                📂 Upload GPX from Strava
-                                <input type="file" name="gpx_file" accept=".gpx"
-                                       onchange="this.form.submit()" style="display:none;">
-                            </label>
-                        </form>
+                        <div class="today-gpx-label">Got actual ride data? Log it for accurate fitness tracking</div>
+
+                        <div class="today-log-buttons">
+                            <button type="button" class="today-log-btn"
+                                    onclick="(function(f){f.style.display = f.style.display === 'none' ? 'block' : 'none';})(document.getElementById('manualForm'))">
+                                📝 Log with details
+                            </button>
+                            <form action="{{ url_for('upload_gpx') }}" method="POST" enctype="multipart/form-data" class="today-log-gpx-form">
+                                <label class="today-log-btn">
+                                    📂 Upload GPX
+                                    <input type="file" name="gpx_file" accept=".gpx"
+                                           onchange="this.form.submit()" style="display:none;">
+                                </label>
+                            </form>
+                        </div>
+
+                        <!-- Manual entry form, hidden by default -->
+                        <div id="manualForm" class="manual-form" style="display:none;">
+                            <form action="{{ url_for('log_manual') }}" method="POST">
+                                <div class="manual-row">
+                                    <label class="manual-label">Duration <span class="manual-req">*</span></label>
+                                    <div class="manual-duration">
+                                        <input type="number" name="duration_h" min="0" max="12" value="1" class="manual-input-sm" aria-label="hours">
+                                        <span class="manual-unit-sm">h</span>
+                                        <input type="number" name="duration_m" min="0" max="59" value="0" class="manual-input-sm" aria-label="minutes">
+                                        <span class="manual-unit-sm">min</span>
+                                    </div>
+                                </div>
+
+                                <div class="manual-grid">
+                                    <div class="manual-row">
+                                        <label class="manual-label">Distance</label>
+                                        <div class="manual-input-wrap">
+                                            <input type="number" name="distance_km" min="0" step="0.1" class="manual-input" placeholder="optional">
+                                            <span class="manual-unit">km</span>
+                                        </div>
+                                    </div>
+                                    <div class="manual-row">
+                                        <label class="manual-label">Avg HR</label>
+                                        <div class="manual-input-wrap">
+                                            <input type="number" name="avg_hr" min="40" max="220" class="manual-input" placeholder="optional">
+                                            <span class="manual-unit">bpm</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="manual-row">
+                                    <label class="manual-label">Elevation</label>
+                                    <div class="manual-input-wrap">
+                                        <input type="number" name="elevation_m" min="0" class="manual-input" placeholder="optional">
+                                        <span class="manual-unit">m</span>
+                                    </div>
+                                </div>
+
+                                <div class="manual-hint">
+                                    Provide either <strong>heart rate</strong> or <strong>distance</strong> — we'll calculate TSS from whichever is more accurate.
+                                </div>
+
+                                <button type="submit" class="manual-submit-btn">Calculate TSS →</button>
+                            </form>
+                        </div>
                     </div>
 
                 {% else %}

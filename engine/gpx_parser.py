@@ -1,8 +1,36 @@
+"""
+CyPath GPX Parser
+Parses a GPX file exported from Strava (or any compatible device) and
+estimates the Training Stress Score (TSS) for the session.
+
+Supported data sources:
+  - GPS coordinates + timestamps  → distance (km) and duration (seconds)
+  - Elevation data                → total climbing (metres)
+  - Heart rate extensions         → avg HR → TRIMP-based TSS estimate
+  - No HR data                    → speed-based intensity estimate
+
+TSS formulae
+────────────
+With heart rate:
+    intensity = avg_hr / ESTIMATED_MAX_HR   (185 bpm — reasonable cycling average)
+    TSS = (duration_hrs × intensity²) × 100
+
+Without heart rate (speed proxy):
+    intensity = lookup from average speed bands
+    TSS = (duration_hrs × intensity²) × 100
+
+These are estimates, not precise power-based calculations.
+The confirmation screen lets the user adjust the value before logging.
+
+Author: Gustavo Miranda
+References: Borresen & Lambert (2009); Coggan & Allen (2010)
+"""
+
 import math
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Tuple
 
 
 # ─── Constants ───────────────────────────────────────────────────────────────
@@ -105,7 +133,18 @@ def _find_hr(trkpt: ET.Element) -> Optional[float]:
 # ─── Public API ──────────────────────────────────────────────────────────────
 
 def parse_gpx(file_bytes: bytes) -> GPXSummary:
+    """
+    Parse a GPX file and return activity metrics and a TSS estimate.
 
+    Args:
+        file_bytes: Raw bytes of the .gpx file.
+
+    Returns:
+        A GPXSummary with distance, duration, elevation, HR, and TSS.
+
+    Raises:
+        ValueError: If the file cannot be parsed or contains no track points.
+    """
     try:
         root = ET.fromstring(file_bytes)
     except ET.ParseError as e:
@@ -215,3 +254,66 @@ def parse_gpx(file_bytes: bytes) -> GPXSummary:
         method=method,
         activity_name=activity_name,
     )
+
+
+# ─── Manual entry helper ─────────────────────────────────────────────────────
+
+def compute_manual_tss(
+    duration_minutes: int,
+    distance_km: Optional[float] = None,
+    avg_hr: Optional[float] = None,
+) -> Tuple[float, str]:
+    """
+    Compute TSS from manual session inputs, mirroring parse_gpx so the
+    Banister model treats GPX-imported and manually-entered sessions
+    consistently.
+
+    Priority of intensity sources:
+        1. avg_hr provided      → HR-based intensity (most accurate)
+        2. distance_km provided → speed-based intensity (fallback)
+
+    Parameters
+    ----------
+    duration_minutes
+        Total session duration in minutes (must be > 0).
+    distance_km
+        Optional distance in kilometres. Used to derive average speed
+        when no heart rate is given.
+    avg_hr
+        Optional average heart rate in bpm.
+
+    Returns
+    -------
+    (tss, method)
+        tss    – Training Stress Score, rounded to 1 decimal place.
+        method – "heart_rate" or "speed", matching parse_gpx output so
+                 the confirmation card renders the same explanation.
+
+    Raises
+    ------
+    ValueError
+        If duration_minutes <= 0, or if neither avg_hr nor distance_km
+        is provided (the model needs at least one intensity proxy).
+    """
+    if duration_minutes <= 0:
+        raise ValueError("Duration must be greater than zero.")
+
+    duration_hrs = duration_minutes / 60.0
+
+    if avg_hr and avg_hr > 0:
+        # HR-based: same formula as the GPX parser.
+        intensity = min(avg_hr / ESTIMATED_MAX_HR, 1.0)
+        method = "heart_rate"
+    elif distance_km and distance_km > 0:
+        # Speed-based fallback: derive avg speed → intensity band lookup.
+        avg_speed_kmh = distance_km / duration_hrs
+        intensity = _speed_intensity(avg_speed_kmh)
+        method = "speed"
+    else:
+        raise ValueError(
+            "Provide either average heart rate or distance "
+            "for an accurate TSS estimate."
+        )
+
+    tss = round(duration_hrs * (intensity ** 2) * 100, 1)
+    return tss, method

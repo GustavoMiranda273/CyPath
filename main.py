@@ -6,7 +6,7 @@ from flask import (
 )
 
 from engine.scheduler import generate_plan, TrainingPlan
-from engine.gpx_parser import parse_gpx, GPXSummary
+from engine.gpx_parser import parse_gpx, GPXSummary, compute_manual_tss
 from engine.banister_model import compute_curve
 from engine.reoptimiser import (
     mark_missed, mark_completed, restore_planned, ReoptimisationResult,
@@ -315,6 +315,76 @@ def confirm_gpx():
 def dismiss_gpx():
     """Dismiss the GPX confirmation card without logging."""
     session.pop("pending_gpx", None)
+    return redirect(url_for("dashboard"))
+
+
+# ─── Manual session entry ────────────────────────────────────────────────────
+
+@app.route("/log-manual", methods=["POST"])
+def log_manual():
+    """
+    Manual session entry: user types in duration plus heart rate or distance
+    instead of uploading a GPX file. Computes TSS using the same formulae as
+    the GPX parser, then routes into the existing pending-confirmation card
+    so the user can review and adjust before the workout is logged.
+    """
+    plan = _current_plan()
+    if plan is None:
+        return redirect(url_for("index"))
+
+    # ── Parse duration (h + m) ──
+    try:
+        duration_h = int(request.form.get("duration_h", "0") or "0")
+        duration_m = int(request.form.get("duration_m", "0") or "0")
+    except ValueError:
+        flash("Invalid duration. Please enter whole numbers.")
+        return redirect(url_for("dashboard"))
+
+    duration_minutes = duration_h * 60 + duration_m
+    if duration_minutes <= 0:
+        flash("Please enter a duration greater than zero.")
+        return redirect(url_for("dashboard"))
+
+    # ── Parse optional numerical fields ──
+    def _opt_float(name: str):
+        raw = (request.form.get(name) or "").strip()
+        if not raw:
+            return None
+        try:
+            value = float(raw)
+            return value if value > 0 else None
+        except ValueError:
+            return None
+
+    distance_km = _opt_float("distance_km")
+    avg_hr      = _opt_float("avg_hr")
+    elevation_m = _opt_float("elevation_m") or 0.0
+
+    # ── Compute TSS ──
+    try:
+        tss, method = compute_manual_tss(
+            duration_minutes=duration_minutes,
+            distance_km=distance_km,
+            avg_hr=avg_hr,
+        )
+    except ValueError as e:
+        flash(str(e))
+        return redirect(url_for("dashboard"))
+
+    # ── Hand off to the existing confirmation card flow ──
+    duration_str = (
+        f"{duration_h}h {duration_m:02d}m" if duration_h else f"{duration_m}m"
+    )
+    session["pending_gpx"] = {
+        "day":           session.get("today_day", 1),
+        "distance_km":   distance_km if distance_km else 0.0,
+        "duration_str":  duration_str,
+        "elevation_m":   elevation_m,
+        "avg_hr":        avg_hr,
+        "estimated_tss": tss,
+        "method":        method,
+        "activity_name": "Manual entry",
+    }
     return redirect(url_for("dashboard"))
 
 

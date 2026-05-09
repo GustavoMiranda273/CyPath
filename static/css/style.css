@@ -1357,3 +1357,189 @@ html.dark .form-explainer-title { color: #E0E0E0; }
 
 html.dark .btn-undo             { background: #1E1E3A; color: var(--body); }
 html.dark .gpx-method-note      { background: #1E1E3A; color: var(--muted); }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MANUAL SESSION ENTRY (alongside GPX upload)
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.today-log-buttons {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+.today-log-gpx-form { flex: 1; margin: 0; }
+
+.today-log-btn {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    background: white;
+    border: 2px dashed var(--border);
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s;
+    flex: 1;
+    font-family: inherit;
+}
+.today-log-btn:hover {
+    border-color: var(--orange);
+    color: var(--orange);
+    background: rgba(230,126,34,0.04);
+}
+
+.manual-form {
+    margin-top: 12px;
+    padding: 14px;
+    background: var(--bg);
+    border-radius: 10px;
+    border: 1px solid var(--border);
+}
+.manual-row { margin-bottom: 12px; }
+.manual-row:last-of-type { margin-bottom: 8px; }
+
+.manual-label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+}
+.manual-req { color: var(--orange); }
+
+.manual-duration {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.manual-input-sm {
+    width: 60px;
+    padding: 8px 10px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: center;
+    color: var(--navy);
+    background: white;
+    font-family: inherit;
+}
+.manual-unit-sm {
+    font-size: 12px;
+    color: var(--muted);
+    margin-right: 6px;
+}
+
+.manual-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.manual-input-wrap {
+    display: flex;
+    align-items: center;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    background: white;
+    padding-right: 10px;
+    overflow: hidden;
+}
+.manual-input {
+    flex: 1;
+    padding: 8px 10px;
+    border: none;
+    background: transparent;
+    font-size: 14px;
+    color: var(--navy);
+    outline: none;
+    width: 100%;
+    font-family: inherit;
+}
+.manual-input::placeholder { color: var(--muted); font-size: 12px; }
+.manual-unit {
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 600;
+}
+
+.manual-hint {
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.4;
+    margin: 4px 0 12px;
+    padding: 8px 10px;
+    background: rgba(230,126,34,0.06);
+    border-radius: 6px;
+}
+.manual-hint strong { color: var(--navy); font-weight: 600; }
+
+.manual-submit-btn {
+    width: 100%;
+    padding: 12px;
+    background: var(--orange);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s;
+    font-family: inherit;
+}
+.manual-submit-btn:hover { background: var(--orange-d); }
+
+/* Dark mode overrides */
+html.dark .today-log-btn       { background: #16213E; color: var(--muted); }
+html.dark .today-log-btn:hover { background: rgba(230,126,34,0.10); color: var(--orange); }
+html.dark .manual-form         { background: #1E1E3A; border-color: #2A2A4A; }
+html.dark .manual-input-sm,
+html.dark .manual-input-wrap   { background: #16213E; border-color: #2A2A4A; }
+html.dark .manual-input,
+html.dark .manual-input-sm     { color: var(--body); }
+html.dark .manual-hint         { background: rgba(230,126,34,0.10); }
+html.dark .manual-hint strong  { color: var(--body); }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   GPX / Manual entry confirmation card buttons
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.primary-btn {
+    flex: 1;
+    padding: 12px 14px;
+    background: var(--success);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.15s;
+    font-family: inherit;
+}
+.primary-btn:hover { opacity: 0.88; }
+
+.ghost-btn {
+    padding: 12px 16px;
+    background: white;
+    color: var(--danger);
+    border: 2px solid var(--danger);
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: inherit;
+    white-space: nowrap;
+}
+.ghost-btn:hover {
+    background: var(--danger);
+    color: white;
+}
+
+html.dark .ghost-btn { background: #16213E; }
