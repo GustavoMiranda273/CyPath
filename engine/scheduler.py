@@ -210,20 +210,7 @@ def _distribute_weekly_tss(
     training_days: List[int],
     phase: str = "Base",
 ) -> Dict[int, tuple]:
-    """
-    Split a week's total TSS across the user's available training days using
-    the hard/easy pattern defined by SESSION_WEIGHTS.
-
-    Args:
-        weekly_tss:    Total TSS to distribute this week.
-        training_days: List of weekday numbers (0=Mon ... 6=Sun) on which the
-                       user can train.
-        phase:         Current training phase — used to select appropriate
-                       workout descriptions from SESSION_CATALOGUE.
-
-    Returns:
-        A dict mapping weekday -> (target_tss, description, detail).
-    """
+    
     num_sessions = len(training_days)
     if num_sessions == 0:
         return {}
@@ -266,19 +253,6 @@ def generate_plan(
     goal_km: float = 100.0,
     total_weeks: int = 12,
 ) -> TrainingPlan:
-    """
-    Generate a periodised training plan for a user-defined distance goal.
-
-    Args:
-        profile:        One of "beginner", "intermediate", or "experienced".
-        training_days:  Weekdays the user can train on (0=Mon ... 6=Sun).
-        recovery_weeks: If True, de-load weeks are inserted periodically.
-        goal_km:        Target event distance in kilometres.
-        total_weeks:    Total plan duration in weeks.
-
-    Returns:
-        A TrainingPlan containing (total_weeks × 7) Workout entries.
-    """
 
     # ── Validate inputs ──────────────────────────────────────────────────────
     if profile not in FITNESS_PROFILES:

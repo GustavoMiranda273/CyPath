@@ -24,13 +24,7 @@ class DaySnapshot:
 class BanisterModel:
 
     def __init__(self, initial_fitness: float = 0.0, initial_fatigue: float = 0.0):
-        """
-        Initialize the Banister model with baseline metrics.
-
-        Args:
-            initial_fitness (float): Starting chronic training load.
-            initial_fatigue (float): Starting acute training load.
-        """
+       
         # Standard physiological time constants (in days)
         self.tau_fitness = 42.0
         self.tau_fatigue = 7.0
@@ -39,13 +33,7 @@ class BanisterModel:
         self.fatigue = initial_fatigue
 
     def add_daily_load(self, training_load: float):
-        """
-        Update fitness and fatigue scores based on daily training load.
-
-        Args:
-            training_load (float): The quantifiable stress score of the workout. 
-                                   Input 0.0 for a rest day.
-        """
+        
         # Calculate exponential decay factors based on respective time constants
         fitness_decay_factor = math.exp(-1 / self.tau_fitness)
         fatigue_decay_factor = math.exp(-1 / self.tau_fatigue)
@@ -55,12 +43,7 @@ class BanisterModel:
         self.fatigue = (self.fatigue * fatigue_decay_factor) + (training_load * (1 - fatigue_decay_factor))
 
     def get_readiness(self) -> float:
-        """
-        Calculate the current Training Stress Balance (Readiness).
-
-        Returns:
-            float: The difference between fitness and fatigue.
-        """
+        
         return self.fitness - self.fatigue
 
 
@@ -73,10 +56,6 @@ def compute_curve(
     
     from engine.reoptimiser import STATUS_COMPLETED, STATUS_MISSED
 
-    # Seed initial fitness/fatigue from the user's starting CTL. We use a
-    # 7× multiplier consistent with the scheduler's weekly TSS calculation,
-    # then derive an equivalent steady-state ATL. For a user at equilibrium,
-    # ATL ≈ CTL × (τ_fitness / τ_fatigue).
     model = BanisterModel(
         initial_fitness=plan.start_ctl,
         initial_fatigue=plan.start_ctl * (7.0 / 42.0),

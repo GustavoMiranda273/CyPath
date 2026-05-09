@@ -229,10 +229,7 @@ def reset():
 
 @app.route("/upload-gpx", methods=["POST"])
 def upload_gpx():
-    """
-    Accept a GPX file, parse it, and store the summary in the session so the
-    confirmation card can be shown on the dashboard.
-    """
+    
     plan = _current_plan()
     if plan is None:
         return redirect(url_for("index"))
@@ -268,11 +265,7 @@ def upload_gpx():
 
 @app.route("/confirm-gpx", methods=["POST"])
 def confirm_gpx():
-    """
-    Log the GPX session with the (possibly user-adjusted) TSS value.
-    Updates the workout's target_tss to the actual value before marking
-    it completed, so the Banister model reflects real training data.
-    """
+  
     plan = _current_plan()
     if plan is None:
         return redirect(url_for("index"))
@@ -452,10 +445,7 @@ def settings_page():
 
 @app.route("/form", methods=["GET"])
 def form_page():
-    """
-    Form & Fitness page — visualises the Banister CTL/ATL/TSB curves over the
-    full plan, with today's snapshot and a TSB-based readiness interpretation.
-    """
+    
     plan = _current_plan()
     if plan is None:
         return redirect(url_for("index"))
