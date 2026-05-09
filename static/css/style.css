@@ -1,3 +1,8 @@
+/* CyPath — polished mobile-first stylesheet
+   Matches the Gemini mockup aesthetic: light grey background, white cards,
+   orange accent, dark navy profile banner, bottom navigation.
+*/
+
 /* ── Reset & base ───────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -1340,9 +1345,15 @@ html.dark .progress-meta-val { color: #E0E0E0; }
     line-height: 1.5;
 }
 
-/* Dark mode */
+/* ══════════════════════════════════════════════════════════════════════════
+   DARK MODE POLISH (form page + small remaining hard-coded colours)
+   ══════════════════════════════════════════════════════════════════════════ */
+
 html.dark .form-num-card        { background: #1E1E3A; }
 html.dark .form-num-val         { color: #E0E0E0; }
 html.dark .form-num-lbl         { color: #E0E0E0; }
 html.dark .readiness-title      { color: #E0E0E0; }
 html.dark .form-explainer-title { color: #E0E0E0; }
+
+html.dark .btn-undo             { background: #1E1E3A; color: var(--body); }
+html.dark .gpx-method-note      { background: #1E1E3A; color: var(--muted); }
