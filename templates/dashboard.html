@@ -151,9 +151,11 @@
         <div class="card today-big-card">
                 <div class="today-big-header">
                     <div class="today-big-label">TODAY — DAY {{ today_day }}</div>
+                    {% if today_workout and today_workout.phase != 'Rest' %}
                     <form action="{{ url_for('advance_day') }}" method="POST">
-                        <button type="submit" class="today-skip-btn">Skip →</button>
+                        <button type="submit" class="today-skip-btn">Next day →</button>
                     </form>
+                    {% endif %}
                 </div>
 
                 {% if today_workout and today_workout.phase != 'Rest' %}
@@ -266,6 +268,9 @@
                         <div class="today-rest-icon">😴</div>
                         <div class="today-big-name">Rest Day</div>
                         <div class="today-big-detail">No training today — recovery is essential for adaptation. Use the time to hydrate, sleep well, and prepare for tomorrow.</div>
+                        <form action="{{ url_for('advance_day') }}" method="POST" class="today-rest-next-form">
+                            <button type="submit" class="today-rest-next-btn">Next day →</button>
+                        </form>
                     </div>
                 {% endif %}
         </div>

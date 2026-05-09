@@ -1543,3 +1543,20 @@ html.dark .manual-hint strong  { color: var(--body); }
 }
 
 html.dark .ghost-btn { background: #16213E; }
+
+/* Rest-day "Next day" primary button */
+.today-rest-next-form { margin-top: 18px; }
+.today-rest-next-btn {
+    width: 100%;
+    padding: 14px;
+    background: var(--orange);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s;
+    font-family: inherit;
+}
+.today-rest-next-btn:hover { background: var(--orange-d); }
