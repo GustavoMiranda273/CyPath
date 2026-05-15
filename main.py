@@ -201,6 +201,17 @@ def advance_day():
     return redirect(url_for("dashboard"))
 
 
+@app.route("/previous-day", methods=["POST"])
+def previous_day():
+    """Step back one day — lets the user review and restore a session logged in error."""
+    plan = _current_plan()
+    if plan is None:
+        return redirect(url_for("index"))
+    current = session.get("today_day", 1)
+    session["today_day"] = max(current - 1, 1)
+    return redirect(url_for("dashboard"))
+
+
 @app.route("/restore-session", methods=["POST"])
 def restore_session():
     """Undo a missed/completed flag, reverting the day to 'planned'."""

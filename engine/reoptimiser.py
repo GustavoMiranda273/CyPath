@@ -111,13 +111,45 @@ def mark_completed(plan: TrainingPlan, day: int) -> None:
 
 
 def restore_planned(plan: TrainingPlan, day: int) -> None:
-    
+    """
+    Restore a missed or completed session to planned status.
+
+    For missed sessions: also restores the original target TSS and reverses
+    any redistribution that was applied to days still in STATUS_PLANNED.
+    Days that were already completed are left untouched — their TSS reflects
+    actual ride data and should not be altered.
+    """
     _ensure_status_fields(plan)
-    for w in plan.workouts:
-        if w.day == day:
-            w.status = STATUS_PLANNED
-            return
-    raise ValueError(f"No workout found for day {day}")
+
+    target: Optional[Workout] = next((w for w in plan.workouts if w.day == day), None)
+    if target is None:
+        raise ValueError(f"No workout found for day {day}")
+
+    if target.status == STATUS_MISSED:
+        # ── Restore original TSS ─────────────────────────────────────────────
+        original = getattr(target, "original_tss", None)
+        if original is not None:
+            target.target_tss = original
+
+        # ── Reverse redistribution on days that are still planned ────────────
+        snapshot: dict = getattr(target, "redistribution_snapshot", {})
+        for affected_day, added_tss in snapshot.items():
+            affected = next(
+                (w for w in plan.workouts if w.day == affected_day), None
+            )
+            if affected and affected.status == STATUS_PLANNED:
+                affected.target_tss = round(
+                    max(0.0, affected.target_tss - added_tss), 1
+                )
+
+        # ── Clean up stored attributes ───────────────────────────────────────
+        for attr in ("original_tss", "redistribution_snapshot"):
+            try:
+                delattr(target, attr)
+            except AttributeError:
+                pass
+
+    target.status = STATUS_PLANNED
 
 
 def mark_missed(plan: TrainingPlan, day: int) -> ReoptimisationResult:
@@ -140,6 +172,8 @@ def mark_missed(plan: TrainingPlan, day: int) -> ReoptimisationResult:
 
     # ── Record the missed TSS and flag the session ───────────────────────────
     missed_tss = missed.target_tss
+    missed.original_tss = missed_tss          # stored for restore
+    missed.redistribution_snapshot = {}       # filled below
     missed.status = STATUS_MISSED
     missed.target_tss = 0.0
 
@@ -169,6 +203,13 @@ def mark_missed(plan: TrainingPlan, day: int) -> ReoptimisationResult:
     redistributed = round(missed_tss - dropped, 1)
 
     affected = [w.day for w in eligible if w.target_tss != before_values[w.day]]
+
+    # Populate snapshot: how much each day received, so restore can reverse it.
+    missed.redistribution_snapshot = {
+        w.day: round(w.target_tss - before_values[w.day], 1)
+        for w in eligible
+        if w.target_tss > before_values[w.day]
+    }
 
     warning: Optional[str] = None
     if dropped > 0.1:
