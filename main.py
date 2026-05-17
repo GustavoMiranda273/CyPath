@@ -41,10 +41,7 @@ def _current_plan() -> Optional[TrainingPlan]:
 
 @app.route("/", methods=["GET"])
 def index():
-    """
-    Onboarding view. If the user already has a plan, send them to the
-    dashboard; otherwise show the plan-creation form.
-    """
+    
     if _current_plan() is not None:
         return redirect(url_for("dashboard"))
     return render_template("onboarding.html")
@@ -52,10 +49,7 @@ def index():
 
 @app.route("/generate-plan", methods=["POST"])
 def create_plan():
-    """
-    Handle the onboarding form submission, generate a 12-week plan, and
-    redirect to the dashboard.
-    """
+    
     profile = request.form.get("profile", "intermediate")
 
     # Training days arrive as a list of strings (e.g. ['1', '3', '5', '6']).
@@ -101,10 +95,7 @@ def create_plan():
 
 @app.route("/dashboard", methods=["GET"])
 def dashboard():
-    """
-    Main dashboard view. Shows today's workout, the readiness curve, and
-    progress towards the goal. The full training plan lives on its own page.
-    """
+    
     plan = _current_plan()
     if plan is None:
         return redirect(url_for("index"))
@@ -326,12 +317,7 @@ def dismiss_gpx():
 
 @app.route("/log-manual", methods=["POST"])
 def log_manual():
-    """
-    Manual session entry: user types in duration plus heart rate or distance
-    instead of uploading a GPX file. Computes TSS using the same formulae as
-    the GPX parser, then routes into the existing pending-confirmation card
-    so the user can review and adjust before the workout is logged.
-    """
+   
     plan = _current_plan()
     if plan is None:
         return redirect(url_for("index"))

@@ -1,47 +1,33 @@
 
-
 from dataclasses import dataclass, field
 from typing import List, Dict
 
 
 # ─── Configuration constants ─────────────────────────────────────────────────
 
-# Starting Chronic Training Load (CTL) for each experience level.
-# These values reflect typical fitness baselines from the sports-science
-# literature and are used as the target weekly TSS at the END of the Base phase.
 FITNESS_PROFILES: Dict[str, float] = {
     "beginner":     30.0,   # Untrained or lightly active
     "intermediate": 50.0,   # Rides regularly, some event experience
     "experienced":  70.0,   # Consistent training, familiar with endurance events
 }
 
-# Phase structure (12-week plan).
-# Each tuple is (phase_name, start_week, end_week) — inclusive.
 PHASES = [
     ("Base",  1, 6),
     ("Build", 7, 10),
     ("Taper", 11, 12),
 ]
 
-# Safety caps — hard-coded physiological limits (see Section 4, NFR1).
+# Safety caps — hard-coded physiological limits.
 MAX_DAILY_TSS:  float = 150.0
 MAX_WEEKLY_TSS: float = 700.0
 
-# Relative weekly TSS multipliers for each phase, expressed as a fraction of
-# the user's target weekly TSS (derived from their starting CTL).
-# Base ramps up, Build peaks, Taper drops sharply.
+
 PHASE_LOAD_MULTIPLIERS: Dict[str, Dict[int, float]] = {
     "Base":  {1: 0.70, 2: 0.80, 3: 0.90, 4: 0.65, 5: 1.00, 6: 1.10},
     "Build": {7: 1.20, 8: 1.30, 9: 0.95, 10: 1.40},
     "Taper": {11: 0.75, 12: 0.50},
 }
-# Note: weeks 4 and 9 are recovery weeks (~30% drop from the previous week).
 
-# Session weights — how weekly TSS is split across training days.
-# The algorithm assigns weights in descending order of TSS:
-#   heaviest session = 0.35 of weekly TSS (the long ride)
-#   second heaviest  = 0.25 (interval / tempo session)
-#   remaining days   = split the rest proportionally
 SESSION_WEIGHTS: List[float] = [0.35, 0.25, 0.18, 0.12, 0.10]
 
 
@@ -140,9 +126,6 @@ def _build_multipliers(phases: List[tuple], recovery_weeks: bool) -> Dict[int, f
 
 
 # ─── Phase-aware session catalogue ──────────────────────────────────────────
-# Each entry is (description, detail) — the detail tells the user exactly
-# what kind of workout to do and how to approach it.
-# Sessions are ordered heaviest-to-lightest (index 0 = longest/hardest).
 
 SESSION_CATALOGUE: Dict[str, List[tuple]] = {
     "Base": [
@@ -237,8 +220,6 @@ def _distribute_weekly_tss(
 
 
 # ─── Goal presets ────────────────────────────────────────────────────────────
-# Maps a distance goal to a recommended number of training weeks and a TSS
-# scale factor relative to the 100 km baseline.
 GOAL_PRESETS: Dict[float, tuple] = {
     50.0:  (6,  0.60),   # 50 km in 6 weeks  — 60% of peak TSS
     75.0:  (9,  0.80),   # 75 km in 9 weeks  — 80% of peak TSS
@@ -266,10 +247,8 @@ def generate_plan(
         raise ValueError("total_weeks must be at least 4")
 
     # ── Derive target weekly TSS ─────────────────────────────────────────────
-    # Sustainable weekly TSS ≈ 7 × CTL (standard coaching rule of thumb).
-    # Scale by the goal's TSS factor so shorter events don't over-stress.
     start_ctl = FITNESS_PROFILES[profile]
-    # Find the closest preset to get the TSS scale factor.
+    
     closest_preset = min(GOAL_PRESETS.keys(), key=lambda k: abs(k - goal_km))
     _, tss_scale = GOAL_PRESETS[closest_preset]
     base_weekly_tss = start_ctl * 7 * tss_scale

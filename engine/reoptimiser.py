@@ -101,7 +101,7 @@ def _redistribute(
 # ─── Public API ──────────────────────────────────────────────────────────────
 
 def mark_completed(plan: TrainingPlan, day: int) -> None:
-    """Mark a planned workout as completed (used when the user logs an activity)."""
+    
     _ensure_status_fields(plan)
     for w in plan.workouts:
         if w.day == day:
@@ -111,14 +111,7 @@ def mark_completed(plan: TrainingPlan, day: int) -> None:
 
 
 def restore_planned(plan: TrainingPlan, day: int) -> None:
-    """
-    Restore a missed or completed session to planned status.
 
-    For missed sessions: also restores the original target TSS and reverses
-    any redistribution that was applied to days still in STATUS_PLANNED.
-    Days that were already completed are left untouched — their TSS reflects
-    actual ride data and should not be altered.
-    """
     _ensure_status_fields(plan)
 
     target: Optional[Workout] = next((w for w in plan.workouts if w.day == day), None)
