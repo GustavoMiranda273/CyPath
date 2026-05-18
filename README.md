@@ -26,7 +26,8 @@ Amateur cyclists struggle to safely train for long-distance endurance events (li
 
 To test the application on your local machine, follow these steps:
 
-**1. Clone the repository:**
+**1. Clone the repository or access using Render:**
 ```bash
 git clone [https://github.com/GustavoMiranda273/CyPath.git](https://github.com/GustavoMiranda273/CyPath.git)
 cd CyPath
+Render link: https://cypath.onrender.com
